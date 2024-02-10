@@ -23,7 +23,7 @@ This repository contains the CircuitPython code that runs on the microcontroller
    3. I'm hoping to see other displays supported if a community develops around this.
 3. [STEMMA QT/Qwiic cable](https://www.adafruit.com/product/4397) to connect the microcontroller to the display.
 
-All in all, the parts are around $26 (USD), at the time of this commit.
+All in all, the parts are around $24 (USD), at the time of this commit.
 
 ## Development
 
