@@ -1,0 +1,11 @@
+adafruit_datetime==1.2.6
+adafruit_ntp==3.0.11
+adafruit_oauth2==1.0.15
+adafruit_requests==2.0.2
+adafruit_ticks==1.0.12
+adafruit_debouncer==2.0.7
+adafruit_bus_device==5.2.7
+adafruit_ht16k33==4.6.6
+adafruit_io==5.7.4
+adafruit_minimqtt==7.4.3
+asyncio==1.2.0
