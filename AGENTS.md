@@ -9,9 +9,10 @@ Day Meter is a CircuitPython application that renders your Google Calendar day o
 and remaining time of the current meeting. It runs standalone on an ESP32 — no host PC
 needed at runtime.
 
-The project's human-readable README exists **only** inside `backups/day_meter-2026-06-03/README.md`
-(it was lost from this root). Restore it to the root if desired, but do not assume its text
-still matches current behavior without reviewing.
+The project's human-readable README is at `README.md` in the root (restored from git history on 2026-11-11;
+reviewed against current code — features and hardware listed are accurate). `requirements.txt`
+lists library dependencies for fresh installs; its version pins date to Feb 2024, so treat the
+on-device `lib/` as authoritative rather than re-pinning from it blindly.
 
 ## Ground rules (read first)
 
@@ -113,7 +114,7 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
 - Root is **byte-for-byte identical** to `day_meter-2026-11-11` — that snapshot *is* the current device state.
 - No backup contains source code newer than root; root is the furthest-along version.
 - `day_meter-2025-07-28` uniquely holds an experimental env-configured `bargraph.py`, a displayio-based library stack, and bundle archives whose filenames date 2025-12-31 (newer than the folder name claims).
-- `day_meter-2026-06-03` uniquely holds `README.md` and `requirements.txt` (both still lost from root), plus the **untouched original git repository** that was copied into this project's root on 2026-11-11.
+- `day_meter-2026-06-03` holds the original copies of `README.md` and `requirements.txt` (both restored to root on 2026-11-11; backup copies are historical), plus the **untouched original git repository** that was copied into this project's root on 2026-11-11.
 
 ## Version control
 
