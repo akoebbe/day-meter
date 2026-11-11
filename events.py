@@ -45,7 +45,7 @@ class EventsRepository():
         return None
 
     def _is_storable_g_event(self, g_event):
-        return not self._is_all_day_event(g_event) and not self._is_out_of_office_event(g_event)
+        return not self._is_all_day_event(g_event) # and not self._is_out_of_office_event(g_event)
     
     def _is_all_day_event(self, g_event):
         return "date" in g_event["start"]

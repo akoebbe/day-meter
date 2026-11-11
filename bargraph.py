@@ -2,7 +2,11 @@ import board
 import math
 import asyncio
 
-from ulab import numpy as np
+try:
+  import numpy as np
+except ImportError as e:
+  from ulab import numpy as np
+
 from adafruit_ht16k33.bargraph import Bicolor24
 
 

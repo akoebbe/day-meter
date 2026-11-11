@@ -1,5 +1,16 @@
+# ignores from the Feb-2024 git init (kept)
 secrets.py
 settings.toml
 .Trash-1000
 lib/*
 .vscode/
+
+# macOS / Finder artifacts present on this copy of CIRCUITPY
+.Trashes
+.fseventsd/
+.metadata_never_index
+
+# added when version control was restored to root, 2026-11-11
+mysecrets.py
+backups/
+__pycache__/

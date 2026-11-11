@@ -4,7 +4,6 @@ import time
 import rtc
 import wifi
 import asyncio
-import bargraph
 import gcal
 from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer
 import ssl
@@ -14,6 +13,7 @@ from adafruit_io.adafruit_io import IO_HTTP
 from events import EventsRepository
 import digitalio
 from adafruit_debouncer import Button
+import bargraph
 
 
 pin = digitalio.DigitalInOut(board.BUTTON)
@@ -25,7 +25,7 @@ boot_button = Button(pin)
 # source control.
 # pylint: disable=no-name-in-module,wrong-import-order
 try:
-    from secrets import secrets
+    from mysecrets import secrets
 except ImportError:
     print("WiFi secrets are kept in secrets.py, please add them there!")
     raise
@@ -43,25 +43,15 @@ while True:
         break
     except Exception as inst:
         print(inst, "(Retrying)")
+        bargraph.progress(0.25, commit=True, color="y")
         time.sleep(1)
+        bargraph.progress(0.25, commit=True)
 
 gc.collect()
 print("Mem Free: {} bytes (wifi)".format(gc.mem_free()))
-
     
 print("Connected with IP address of {0}".format(wifi.radio.ipv4_address))
 print("\n----------------------------------------\n")
-
-cal_events = EventsRepository()
-#day_renderer = static_day_renderer.StaticDayRenderer(cal_events, bargraph)
-half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, bargraph, 8)
-meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, bargraph, 10)
-meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, bargraph)
-zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, bargraph)
-
-gc.collect()
-print("Mem Free: {} bytes (init)".format(gc.mem_free()))
-
 
 pool = socketpool.SocketPool(wifi.radio)
 requests = adafruit_requests.Session(pool, ssl.create_default_context())
@@ -70,8 +60,8 @@ gc.collect()
 print("Mem Free: {} bytes (request init)".format(gc.mem_free()))
 
 bargraph.progress(0.5, commit=True)
-print("Getting time from Adafruit.io internet")
 while True:
+    print("Getting time from Adafruit.io internet")
     try:
         # ntp = adafruit_ntp.NTP(pool, tz_offset=0)
         # rtc.RTC().datetime = ntp.datetime
@@ -89,17 +79,30 @@ while True:
         break
     except Exception as inst:
         print(inst, "(Retrying)")
+        bargraph.progress(0.5, commit=True, color="y")
         time.sleep(1)
+        bargraph.progress(0.5, commit=True)
 
 
 
 print("Current time is {0}".format(time.localtime()))
 print("\n----------------------------------------\n")
 
+# ONE TIME USE for client oauth (uncommnet if you have to reset client keys)
+# gcal.initialize_client_keys()
 
-print("Refreshing Google Token")
 bargraph.progress(0.75, commit=True)
-gcal.refresh_token()
+while True:
+    print("Refreshing Google Token")
+    try:
+        gcal.refresh_token()
+        break
+    except Exception as inst:
+        print(inst, "(Retrying)")
+        bargraph.progress(0.75, commit=True, color="y")
+        time.sleep(1)
+        bargraph.progress(0.75, commit=True)
+
 gc.collect()
 print("Mem Free: {} bytes (google token)".format(gc.mem_free()))
 
@@ -107,10 +110,24 @@ print("\n----------------------------------------\n")
 
 bargraph.progress(1, commit=True)
 
+cal_events = EventsRepository()
+#day_renderer = static_day_renderer.StaticDayRenderer(cal_events, bargraph)
+half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, bargraph, 8)
+meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, bargraph, 10)
+meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, bargraph)
+zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, bargraph)
+
+gc.collect()
+print("Mem Free: {} bytes (init)".format(gc.mem_free()))
 
 async def refresh_token_runner():
     while True:
-        gcal.refresh_token()
+        print("Refreshing token")
+        try:
+            gcal.refresh_token()
+        except Exception as e:
+            print("Couldn't refresh token. Skipping this attempt. Exception: {}".format(e))
+            continue            
         gc.collect()
         print("Mem Free: {} bytes (refresh_token_runner)".format(gc.mem_free()))
         await asyncio.sleep(gcal.REFRESH_TIME * 60)
@@ -173,5 +190,9 @@ async def main():
         refresh_token_task, event_fetcher_task, ticker_task, button_task
     )
 
-asyncio.run(main())
-
+try:
+    asyncio.run(main())
+except Exception as e:
+    print("Async loop failed. Resetting the microcontroller. Exception: {}".format(e))
+    import microcontroller
+    microcontroller.reset()

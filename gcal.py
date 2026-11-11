@@ -7,7 +7,7 @@ from events import time_struct_to_iso
 from adafruit_oauth2 import OAuth2
 
 try:
-    from secrets import secrets
+    from mysecrets import secrets
 except ImportError:
     print("Google secrets are kept in secrets.py, please add them there!")
     raise
@@ -18,7 +18,7 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 scopes = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 # Calendar ID
-CALENDAR_ID = "andrew.koebbe@uniteus.com"
+CALENDAR_ID = secrets['google_calendar']
 
 # Maximum amount of events to fetch
 MAX_EVENTS = 40
@@ -36,6 +36,40 @@ google_auth = OAuth2(
     secrets["google_access_token"],
     secrets["google_refresh_token"],
 )
+
+def initialize_client_keys():
+    # Initialize an OAuth2 object
+    google_auth = OAuth2(
+        requests,
+        secrets["google_client_id"],
+        secrets["google_client_secret"],
+        scopes,
+    )
+
+    # Request device and user codes
+    # https://developers.google.com/identity/protocols/oauth2/limited-input-device#step-1:-request-device-and-user-codes
+    google_auth.request_codes()
+
+    # Display user code and verification url
+    # NOTE: If you are displaying this on a screen, ensure the text label fields are
+    # long enough to handle the user_code and verification_url.
+    # Details in link below:
+    # https://developers.google.com/identity/protocols/oauth2/limited-input-device#displayingthecode
+    print(
+        "1) Navigate to the following URL in a web browser:", google_auth.verification_url
+    )
+    print("2) Enter the following code:", google_auth.user_code)
+
+    # Poll Google's authorization server
+    print("Waiting for browser authorization...")
+    if not google_auth.wait_for_authorization():
+        raise RuntimeError("Timed out waiting for browser response!")
+
+    print("Successfully Authenticated with Google!")
+    print("Add the following lines to your settings.toml file:")
+    print(f'google_access_token="{google_auth.access_token}"')
+    print(f'google_refresh_token="{google_auth.refresh_token}"')
+
 
 def refresh_token():
     try:
