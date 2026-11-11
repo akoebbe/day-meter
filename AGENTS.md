@@ -113,7 +113,13 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
 - Root is **byte-for-byte identical** to `day_meter-2026-11-11` — that snapshot *is* the current device state.
 - No backup contains source code newer than root; root is the furthest-along version.
 - `day_meter-2025-07-28` uniquely holds an experimental env-configured `bargraph.py`, a displayio-based library stack, and bundle archives whose filenames date 2025-12-31 (newer than the folder name claims).
-- `day_meter-2026-06-03` uniquely holds the original **git repository** (commits from Feb 2024), plus `README.md`, `requirements.txt`, and `.gitignore` — all lost from root.
+- `day_meter-2026-06-03` uniquely holds `README.md` and `requirements.txt` (both still lost from root), plus the **untouched original git repository** that was copied into this project's root on 2026-11-11.
+
+## Version control
+
+- Root is under git since 2026-11-11 (restored by copying `backups/day_meter-2026-06-03/.git` into root). Origin = `git@github.com:akoebbe/day-meter.git`; tip after restore = commit `30c1bf9`. The backup keeps its `.git` as a historical artifact.
+- `.gitignore` excludes live secrets (`mysecrets.py`, `secrets.py`), `backups/`, compiled `lib/*`, `.vscode/`, `settings.toml`, and macOS artifacts. Note the Feb-2024 repo did **not** ignore `mysecrets.py`; that gap was fixed *before* the restore commit — keep it closed.
+- Before committing anything: run `git status --porcelain` and confirm no `backups/`, `lib/`, `.vscode/`, or secrets paths are staged; never echo secret values into commit messages or logs.
 
 ## Agent state directory
 
