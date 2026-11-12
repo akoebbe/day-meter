@@ -54,6 +54,8 @@ on-device `lib/` as authoritative rather than re-pinning from it blindly.
    local extension directory in `.vscode/settings.json`.
 5. `safemode.py` is a one-line board reset (`microcontroller.reset()`) — useful only on the device
    when the normal boot wedges. Don't treat it as part of the app.
+6. Desktop test code lives in `tests/` (committed to git but **never copied** into the CIRCUITPY drive).
+   Run with `python3 -m unittest discover tests`; scope and CI notes are in `.agents/notes/dev-testing-plan.md`.
 
 ## Architecture
 
@@ -122,10 +124,22 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
 - `.gitignore` excludes live secrets (`mysecrets.py`, `secrets.py`), `backups/`, compiled `lib/*`, `.vscode/`, `settings.toml`, and macOS artifacts. Note the Feb-2024 repo did **not** ignore `mysecrets.py`; that gap was fixed *before* the restore commit — keep it closed.
 - Before committing anything: run `git status --porcelain` and confirm no `backups/`, `lib/`, `.vscode/`, or secrets paths are staged; never echo secret values into commit messages or logs.
 
+## Planned features & development testing
+
+- Backlog of four planned features (**not in priority order** — other display types beyond the bargraph;
+  additional calendar sources such as Outlook; physical button/rotary-encoder input; overlapping/concurrent
+  event rendering) lives at `.agents/notes/features/roadmap.md`.
+- The desktop automated test system for renderers (golden-frame tests, stdlib `unittest`, GitHub Actions CI)
+  is planned in `.agents/notes/dev-testing-plan.md`; it lands before feature work begins.
+- Shared architectural seams serving both: a display abstraction (pure frame math + driver adapters),
+  injectable clock into repository queries, and resolution of the time/timezone gotcha above — see
+  "Shared seams" in roadmap.md. Each feature gets its own `.agents/notes/features/<topic>.md` when scoped.
+
 ## Agent state directory
 
 Persistent agent context lives in `.agents/`:
 
 - `AGENTS.md` (this file) — standing instructions; keep it current when conventions change.
 - `.agents/notes/snapshot-timeline.md` — evidence for the backup provenance record above.
-- Future feature work: add short notes under `.agents/notes/features/<topic>.md` as features are scoped, and reference them from this file.
+- Future feature work: the shared backlog lives in `.agents/notes/features/roadmap.md`; individual `<topic>.md`
+  notes get added there as each feature is scoped.
