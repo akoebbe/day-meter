@@ -65,6 +65,11 @@ feature work actually touches those paths (see shared seam 2 in roadmap.md).
 
 ## CI (GitHub Actions — origin is a GitHub repo)
 
+> **Status (developer decision 2026-11-11):** implementation deferred — the shipped test system
+  runs locally (`python3 -m unittest discover tests` from the repo root); no `.github/workflows`
+  files were committed. The design below remains trivially-CI-ready: stdlib-only suite, no pip
+  installs, single job.
+
 `.github/workflows/ci.yml`, single job to start:
 - ubuntu-latest, Python 3.12 (add 3.11 to matrix if cheap), **no pip installs needed** — the tested
   code paths are stdlib-only; `python -m unittest discover -v tests` is the whole step. This

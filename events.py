@@ -15,8 +15,9 @@ class EventsRepository():
                 new_events.append({"start": iso_to_time_struct(g_event["start"]["dateTime"]), "end": iso_to_time_struct(g_event["end"]["dateTime"])})
         self.EVENTS = new_events
 
-    def get_current_event(self):
-        now = time.localtime()
+    def get_current_event(self, now=None):
+        if now is None:
+            now = time.localtime()
         
         current_events = [event for event in self.EVENTS if event["start"] < now and event["end"] > now]
         if len(current_events) > 0:
@@ -36,8 +37,9 @@ class EventsRepository():
         
         return found
 
-    def get_next_event(self):
-        now = time.localtime()
+    def get_next_event(self, now=None):
+        if now is None:
+            now = time.localtime()
         
         upcoming_events = [event for event in self.EVENTS if event["start"] > now]
         if len(upcoming_events) > 0:
