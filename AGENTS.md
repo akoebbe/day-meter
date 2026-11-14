@@ -85,8 +85,9 @@ Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via the inje
 
 Data model: `EventsRepository.EVENTS` holds lists of `{"start", "end"}` as naive `time.struct_time`,
 converted from Google's UTC ISO strings (`iso_to_time_struct` strips the `Z`). All-day events are
-filtered out; an `_is_out_of_office_event` filter exists but is **commented out** in
-`_is_storable_g_event`.
+filtered out unconditionally; Google out-of-office events are filtered only when
+`secrets["filter_out_of_office"]` is true (opt-in, default off — `EventsRepository` takes a
+`filter_out_of_office` kwarg, wired at `main.py`).
 
 ## Conventions & gotchas
 

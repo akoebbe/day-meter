@@ -57,12 +57,17 @@ class LoadEventsFromGoogleTests(unittest.TestCase):
         self.assertEqual(repo.EVENTS[0]["start"], st(2026, 11, 11, 9, 0, 0))
         self.assertEqual(repo.EVENTS[0]["end"], st(2026, 11, 11, 10, 0, 0))
 
-    def test_out_of_office_not_filtered_current_behavior(self):
-        # Pinned: the out-of-office clause in _is_storable_g_event is commented out,
-        # so an OOO event IS stored. Update this assertion when that filter returns.
+    def test_out_of_office_stored_by_default(self):
+        # The out-of-office filter is opt-in: off by default, so an OOO event IS stored.
         repo = events.EventsRepository()
         repo.load_events_from_google(self._google_events())
         self.assertEqual(repo.EVENTS[1]["start"], st(2026, 11, 11, 14, 0, 0))
+
+    def test_out_of_office_filtered_when_enabled(self):
+        repo = events.EventsRepository(filter_out_of_office=True)
+        repo.load_events_from_google(self._google_events())
+        self.assertEqual(len(repo.EVENTS), 1)
+        self.assertEqual(repo.EVENTS[0]["start"], st(2026, 11, 11, 9, 0, 0))
 
 
 class CurrentNextEventTests(unittest.TestCase):

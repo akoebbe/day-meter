@@ -41,8 +41,9 @@ feature work actually touches those paths (see shared seam 2 in roadmap.md).
    - `iso_to_time_struct`: round-trip with `time_struct_to_iso`; pinned edge behavior (strips `Z`;
      offset-bearing strings like `+05:30` currently break — pin that as documented behavior).
    - Filters via `load_events_from_google` with synthetic Google-shaped dicts (`{"start": {"dateTime"|"date"...}}`,
-     `eventType`): all-day events excluded; **out-of-office is currently NOT filtered** (line commented out)
-     — test must assert current behavior, not the commented-out intent.
+     `eventType`): all-day events excluded unconditionally; out-of-office is an opt-in filter
+     (`EventsRepository(filter_out_of_office=...)`, default off) — tests pin both the default-stored
+     and enabled-filtered cases.
    - `get_current_event` / `get_next_event` with monkeypatched now: before/during/after, no events,
      multiple overlaps (pinned "first match" semantics).
    - `get_events_starting_between`: was KNOWN BUG — with int args it converted

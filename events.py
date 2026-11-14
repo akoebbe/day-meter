@@ -5,6 +5,10 @@ class EventsRepository():
     # TODO: Make this a class
     EVENTS = []
 
+    def __init__(self, filter_out_of_office=False):
+        self.EVENTS = []
+        self._filter_out_of_office = filter_out_of_office
+
     def load_events(self, events_list):
         self.EVENTS = events_list
 
@@ -47,7 +51,11 @@ class EventsRepository():
         return None
 
     def _is_storable_g_event(self, g_event):
-        return not self._is_all_day_event(g_event) # and not self._is_out_of_office_event(g_event)
+        if self._is_all_day_event(g_event):
+            return False
+        if self._filter_out_of_office and self._is_out_of_office_event(g_event):
+            return False
+        return True
     
     def _is_all_day_event(self, g_event):
         return "date" in g_event["start"]

@@ -111,7 +111,7 @@ print("\n----------------------------------------\n")
 
 display.progress(1, commit=True)
 
-cal_events = EventsRepository()
+cal_events = EventsRepository(filter_out_of_office=secrets.get("filter_out_of_office", False))
 #day_renderer = static_day_renderer.StaticDayRenderer(cal_events, display)
 half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, display, 8)
 meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, display, 10)
