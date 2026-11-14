@@ -144,14 +144,19 @@ class GetEventsStartingBetweenTests(unittest.TestCase):
         found = repo.get_events_starting_between(st(2026, 11, 11, 12, 0, 0), st(2026, 11, 11, 13, 0, 0))
         self.assertEqual([e["start"] for e in found], [st(2026, 11, 11, 12, 0, 0)])
 
-    def test_int_end_pinned_current_bug(self):
-        # Pinned current bug: with an int `end` the code does end = time.localtime(start) --
-        # converting START instead of END. With a struct start, that call is
-        # time.localtime(<struct_time>) -> TypeError("must be real number"), before any wall-clock
-        # read or print, so this test stays hermetic without freeze_clock; the intended
-        # localtime(end) would have accepted 1764518400 fine. Fix in a later change (D4).
+    def test_int_end_converts_end_not_start(self):
+        # D4 fixed: int `end` is converted via time.localtime(end); a struct
+        # `start` is left untouched (no conversion). With a struct start + int
+        # end the method no longer raises (the old bug did time.localtime(<struct>)).
+        # Expected is derived the same way (struct start, localtime(end) bound)
+        # so the assertion is independent of wall clock / timezone / DST.
         repo = self._repo()
-        self.assertRaises(TypeError, repo.get_events_starting_between, st(2026, 11, 11, 9, 0, 0), 1764518400)
+        start_struct = st(2026, 11, 11, 9, 0, 0)
+        end_epoch = 1764518400
+        expected = [e["start"] for e in repo.EVENTS
+                    if e["start"] >= start_struct and e["start"] < time.localtime(end_epoch)]
+        found = repo.get_events_starting_between(start_struct, end_epoch)
+        self.assertEqual([e["start"] for e in found], expected)
 
 
 class HourBoundaryTests(unittest.TestCase):

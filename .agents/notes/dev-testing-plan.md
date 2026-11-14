@@ -45,10 +45,12 @@ feature work actually touches those paths (see shared seam 2 in roadmap.md).
      — test must assert current behavior, not the commented-out intent.
    - `get_current_event` / `get_next_event` with monkeypatched now: before/during/after, no events,
      multiple overlaps (pinned "first match" semantics).
-   - `get_events_starting_between`: KNOWN BUG — when int args are passed it converts `end =
-     time.localtime(start)` instead of `time.localtime(end)`. Strategy: write a test pinning the bug
-     first (documented), flip to correct expectation only after owner approves the fix. Same
-     discipline for anything else tests reveal.
+   - `get_events_starting_between`: was KNOWN BUG — with int args it converted
+   `end = time.localtime(start)` instead of `time.localtime(end)` (pinned as
+   `test_int_end_pinned_current_bug`); **fixed (D4)** so int `end` now converts via
+   `time.localtime(end)` and the test became `test_int_end_converts_end_not_start`.
+   No live caller passes ints (all three renderers pass struct args), so the fix is
+   latent-safe. Same pin-then-fix discipline for anything else tests reveal.
    - `start_of_hour` / `end_of_hour` boundary math.
 2. `tests/test_renderers_*.py` — golden-frame tests, one module per renderer class:
    - For each active renderer (`StaticHalfDayRenderer(start_hour=8)`, `MeetingCountdown(10)`,

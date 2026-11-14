@@ -29,7 +29,7 @@ class EventsRepository():
         if isinstance(start, int):
             start = time.localtime(start)
         if isinstance(end, int):
-            end = time.localtime(start)
+            end = time.localtime(end)
             
         found = [event for event in self.EVENTS if event["start"] >= start and event["start"] < end]
         
