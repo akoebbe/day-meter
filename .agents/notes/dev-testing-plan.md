@@ -105,6 +105,13 @@ tests/
    dependence).
 3. **P3 — CI hardening.** Lint job or mpy-cross check added; workflow triggers tuned; first real bug
    caught in CI is handled by the pin-then-fix discipline from test_events above.
+> **Status (seam shipped):** `bargraph.py` split into the `display/` package —
+`frame_math.py` (pure, stdlib-only), `base.py` (`Display` contract), `bicolor24.py`
+(`Bicolor24Adapter`, first adapter), `selector.py` (builds from `secrets["display"]`,
+default `bicolor24`); `main.py` constructs the display instance; `bargraph.py` deleted.
+`tests/test_frame_math.py` + `tests/test_display_base.py` cover the pure math and the
+base contract. Concrete new-display adapters (hub75/e-ink/OLED) remain F1 follow-on.
+
 4. **P4 — bargraph seam refactor (pairs with feature F1).** Split `bargraph.py` into pure frame math
    (testable, framework-free) + hardware adapter (`Bicolor24Driver`); renderer-facing contract frozen
    as the Display abstraction; then hub75/eink/OLED adapters slot in. Exit: bargraph's own unit tests

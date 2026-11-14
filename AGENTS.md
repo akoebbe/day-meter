@@ -71,10 +71,10 @@ Boot sequence (top of `main.py`), each step in a retry loop with yellow bargraph
 |---|---|---|
 | `refresh_token_runner` | every 15 min (`gcal.REFRESH_TIME`) | keeps Google access token valid |
 | `event_fetcher` | every 300 s | pulls calendar events (yesterday→tomorrow window, max 40) into `EventsRepository` |
-| `ticker` | every 5 s | renders active screens, then `bargraph.commit_frame()` |
+| `ticker` | every 5 s | renders active screens, then `display.commit()` |
 | `button_listener` | continuous | boot button cycles `ZoomDayRenderer` zoom level |
 
-Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via `bargraph.py`):
+Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via the injected `Display` (`display/base.py`)):
 
 - `StaticHalfDayRenderer(start_hour=8)` — **active**: half-hour resolution from 08:00; green = meeting start, yellow/red = now marker.
 - `MeetingCountdown(countdown_min=10)` — **active**: green left-justified fill for the next event within 10 min of start.
@@ -97,10 +97,14 @@ filtered out; an `_is_out_of_office_event` filter exists but is **commented out*
   event times are UTC-parsed while comparisons use local `time.localtime()`. Whatever the exact
   behavior on-device, **verify time assumptions before editing anything date/time related**, and
   do not "clean up" these without confirming what actually renders correctly.
-- `bargraph.py`: `set_frame` only writes changed LEDs; frames are ulab/numpy arrays with a
-  CPython-numpy fallback import (`try: import numpy / except: from ulab ...`). The `WifiAnimation`
-  class is dormant (`wifi_animation = False`) and **buggy** — it calls `WifiAnimation.tick()` without
-  an instance. Fix before ever enabling it.
+- `display/` (F1 seam): `frame_math.py` = pure stdlib frame math (plain lists, no
+  numpy); `base.py` = `Display` contract (`set_frame` / `set_frame_from_text` / `progress`
+  / `commit` — the three renderer methods are frozen by the test suite);
+  `bicolor24.py` = first adapter (I2C init in `__init__`, diff-writes changed LEDs,
+  `commit()` prints ASCII then `bc24.show()`); `selector.py` builds the adapter from
+  `secrets["display"]` (default `bicolor24`; unknown name → `ValueError` at boot).
+  `WifiAnimation` remains dormant (`wifi_animation = False`) and **buggy** — it calls
+  `WifiAnimation.tick()` without an instance. Fix before ever enabling it.
 - Google Calendar call in `gcal.py`: REST GET with `singleEvents=true`, `fields=items(start,end,eventType)`.
   One-time re-auth: uncomment the `gcal.initialize_client_keys()` line in `main.py` (device-code flow;
   prints URL + code, then outputs tokens to paste into `mysecrets.py`).

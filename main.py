@@ -13,7 +13,7 @@ from adafruit_io.adafruit_io import IO_HTTP
 from events import EventsRepository
 import digitalio
 from adafruit_debouncer import Button
-import bargraph
+from display.selector import build_display
 
 
 pin = digitalio.DigitalInOut(board.BUTTON)
@@ -30,22 +30,23 @@ except ImportError:
     print("WiFi secrets are kept in secrets.py, please add them there!")
     raise
 
+display = build_display(secrets)
 gc.collect()
 print("Mem Free: {} bytes (start)".format(gc.mem_free()))
 
 
 print("\n----------------------------------------\n")
 print("Connecting to Wifi: {0}".format(secrets["ssid"]))
-bargraph.progress(0.25, commit=True)
+display.progress(0.25, commit=True)
 while True:
     try:
         wifi.radio.connect(secrets['ssid'], secrets['password'])
         break
     except Exception as inst:
         print(inst, "(Retrying)")
-        bargraph.progress(0.25, commit=True, color="y")
+        display.progress(0.25, commit=True, color="y")
         time.sleep(1)
-        bargraph.progress(0.25, commit=True)
+        display.progress(0.25, commit=True)
 
 gc.collect()
 print("Mem Free: {} bytes (wifi)".format(gc.mem_free()))
@@ -59,7 +60,7 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 gc.collect()
 print("Mem Free: {} bytes (request init)".format(gc.mem_free()))
 
-bargraph.progress(0.5, commit=True)
+display.progress(0.5, commit=True)
 while True:
     print("Getting time from Adafruit.io internet")
     try:
@@ -79,9 +80,9 @@ while True:
         break
     except Exception as inst:
         print(inst, "(Retrying)")
-        bargraph.progress(0.5, commit=True, color="y")
+        display.progress(0.5, commit=True, color="y")
         time.sleep(1)
-        bargraph.progress(0.5, commit=True)
+        display.progress(0.5, commit=True)
 
 
 
@@ -91,7 +92,7 @@ print("\n----------------------------------------\n")
 # ONE TIME USE for client oauth (uncommnet if you have to reset client keys)
 # gcal.initialize_client_keys()
 
-bargraph.progress(0.75, commit=True)
+display.progress(0.75, commit=True)
 while True:
     print("Refreshing Google Token")
     try:
@@ -99,23 +100,23 @@ while True:
         break
     except Exception as inst:
         print(inst, "(Retrying)")
-        bargraph.progress(0.75, commit=True, color="y")
+        display.progress(0.75, commit=True, color="y")
         time.sleep(1)
-        bargraph.progress(0.75, commit=True)
+        display.progress(0.75, commit=True)
 
 gc.collect()
 print("Mem Free: {} bytes (google token)".format(gc.mem_free()))
 
 print("\n----------------------------------------\n")
 
-bargraph.progress(1, commit=True)
+display.progress(1, commit=True)
 
 cal_events = EventsRepository()
-#day_renderer = static_day_renderer.StaticDayRenderer(cal_events, bargraph)
-half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, bargraph, 8)
-meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, bargraph, 10)
-meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, bargraph)
-zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, bargraph)
+#day_renderer = static_day_renderer.StaticDayRenderer(cal_events, display)
+half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, display, 8)
+meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, display, 10)
+meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, display)
+zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, display)
 
 gc.collect()
 print("Mem Free: {} bytes (init)".format(gc.mem_free()))
@@ -148,8 +149,8 @@ async def ticker():
         #zoom_day_renderer.render(time.localtime())
         meeting_countdown_renderer.render(time.localtime())
         meeting_time_left_renderer.render(time.localtime())
-        # bargraph.progress((time.localtime().tm_min/60), justified="right")
-        bargraph.commit_frame()
+        # display.progress((time.localtime().tm_min/60), justified="right")
+        display.commit()
 
         gc.collect()
         print("Mem Free: {} bytes (ticker)".format(gc.mem_free()))

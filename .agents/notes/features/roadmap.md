@@ -8,6 +8,10 @@ when scoping actually begins; this file stays the shared backlog.
 
 Support displays beyond the 24-bar bicolor bargraph: hub75 LED matrices, e-ink panels,
 and OLED/LCD over I2C or SPI.
+> **Status:** seam shipped (`display/` package, runtime selection via `secrets["display"]`).
+Remaining F1 = concrete new-display adapters — each: new adapter class + one
+`display/selector.py` entry + its lib in `lib/`.
+
 
 Architecture surface:
 - `bargraph.py` currently couples frame math (text→array, diff-write) to one concrete driver
@@ -44,7 +48,7 @@ currently orphaned in `renderers/meeting_combined.py`.
 
 ## Shared seams these features all lean on
 
-1. **Display abstraction** (F1, plus the desktop test system): pure frame logic + driver adapters.
+1. **Display abstraction** (F1, plus the desktop test system): pure frame logic + driver adapters. *(seam shipped: `display/` package — `frame_math` pure, `Display` contract, `Bicolor24Adapter` first adapter; concrete new-display adapters remain.)*
 2. **Deterministic clock injection**: `render(now)` already exists; repository queries still call
    `time.localtime()` internally (`get_current_event`, `get_next_event`) — needs injectable now
    before any renderer feature can be tested reliably or extended (affects F1–F4 and the test plan).
