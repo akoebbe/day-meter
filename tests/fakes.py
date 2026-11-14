@@ -103,3 +103,82 @@ class freeze_clock(object):
 def mktime_delta(start_struct, end_struct):
     """Exact deterministic seconds delta under freeze_clock (for expected-pct math)."""
     return freeze_clock._mktime(end_struct) - freeze_clock._mktime(start_struct)
+
+# ---------------------------------------------------------------------------
+# Hardware-adapter test doubles (display/bicolor24.py).
+#
+# The real Bicolor24 driver + board.STEMMA_I2C() exist only on the device, so
+# hardware_stub injects desktop stand-ins into sys.modules to let the adapter
+# import and run its pure logic (diff-write / commit / palette) with no I2C.
+# FakeBicolor24Driver's constants mirror the bundled driver
+# (LED_OFF=0, LED_GREEN=1, LED_RED=2, LED_YELLOW=3).
+# ---------------------------------------------------------------------------
+
+
+class FakeBicolor24Driver(object):
+    """Desktop stand-in for adafruit_ht16k33.bargraph.Bicolor24.
+
+    The adapter (display/bicolor24.py) uses only: the LED_* color constants,
+    per-LED __setitem__, and show(). Records every write so tests can
+    reconstruct the frame and count commits without real I2C.
+    """
+    LED_OFF = 0
+    LED_GREEN = 1
+    LED_RED = 2
+    LED_YELLOW = 3
+
+    def __init__(self, i2c=None, auto_write=False):
+        self._written = {}   # index -> last color int the adapter set
+        self.shows = 0
+
+    def __setitem__(self, index, value):
+        self._written[index] = value
+
+    def show(self):
+        self.shows += 1
+
+    def frame(self, led_count=24):
+        """Reconstruct the full 24-slot frame from recorded writes."""
+        return [self._written.get(i, 0) for i in range(led_count)]
+
+class hardware_stub(object):
+    """Patches sys.modules so display/bicolor24.py imports on desktop.
+
+    Injects a fake `board` (with STEMMA_I2C()) and a fake
+    adafruit_ht16k33.bargraph.Bicolor24 (= FakeBicolor24Driver). Restores
+    sys.modules on exit. Enter *before* importing display.bicolor24.
+    """
+
+    def __init__(self):
+        self._saved = {}
+
+    def __enter__(self):
+        import sys
+        import types
+        self._saved = {
+            name: sys.modules.get(name)
+            for name in (
+                "board", "adafruit_ht16k33", "adafruit_ht16k33.bargraph",
+                "display.bicolor24",
+            )
+        }
+        board = types.ModuleType("board")
+        board.STEMMA_I2C = lambda: object()
+        pkg = types.ModuleType("adafruit_ht16k33")
+        bargraph = types.ModuleType("adafruit_ht16k33.bargraph")
+        bargraph.Bicolor24 = FakeBicolor24Driver
+        pkg.bargraph = bargraph
+        sys.modules["board"] = board
+        sys.modules["adafruit_ht16k33"] = pkg
+        sys.modules["adafruit_ht16k33.bargraph"] = bargraph
+        sys.modules.pop("display.bicolor24", None)
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        import sys
+        for name, module in self._saved.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
+        return False
