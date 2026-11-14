@@ -59,9 +59,11 @@ feature work actually touches those paths (see shared seam 2 in roadmap.md).
    - Expected values are computed by hand once per case and eyeballed through the ASCII helper before
      being committed as goldens — a wrong golden is worse than none; review each table in PR notes.
    - ZoomDayRenderer: one case per zoom level × event placement (window offset near now).
-3. Out of scope for Phase 1–2 (honest gaps to document): `bargraph.py` itself cannot import on desktop
-   (module-level `board`/`Bicolor24` init), so its text→LED color constants and diff-write behavior are
-   not covered until the seam refactor in Phase 4; `MeetingCombined` stays untested until/unless F4 adopts it.
+3. Out of scope for Phase 1–2 (honest gaps to document): the `Bicolor24Adapter` hardware
+   path did import only on the board (module-level `board`/`Bicolor24` init), so its text→LED
+   color constants and diff-write behavior were not covered until the seam refactor in Phase 4;
+   that is now closed via the `hardware_stub` double in `tests/fakes.py` (see `test_bicolor24_adapter.py`).
+   `MeetingCombined` stays untested until/unless F4 adopts it.
 
 ## CI (GitHub Actions — origin is a GitHub repo)
 
@@ -110,7 +112,12 @@ tests/
 (`Bicolor24Adapter`, first adapter), `selector.py` (builds from `secrets["display"]`,
 default `bicolor24`); `main.py` constructs the display instance; `bargraph.py` deleted.
 `tests/test_frame_math.py` + `tests/test_display_base.py` cover the pure math and the
-base contract. Concrete new-display adapters (hub75/e-ink/OLED) remain F1 follow-on.
+base contract; `tests/test_bicolor24_adapter.py` covers the `Bicolor24Adapter` hardware
+path via the `hardware_stub` test double in `tests/fakes.py` (palette-from-driver-constants,
+set_frame write/length/reverse, commit show+ASCII, progress commit vs no-commit).
+Both halves of P4's exit criterion are now met: bargraph's own unit tests exist, and
+F1 has a concrete adapter interface to implement against. Concrete new-display adapters
+(hub75/e-ink/OLED) remain F1 follow-on.
 
 4. **P4 — bargraph seam refactor (pairs with feature F1).** Split `bargraph.py` into pure frame math
    (testable, framework-free) + hardware adapter (`Bicolor24Driver`); renderer-facing contract frozen
