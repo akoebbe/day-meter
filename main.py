@@ -7,7 +7,8 @@ import rtc
 import wifi
 import asyncio
 import gcal
-from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer
+from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer, meeting_alert
+from meeting_alert_controller import MeetingAlert
 import ssl
 import adafruit_requests
 import gc
@@ -114,6 +115,8 @@ half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, d
 meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, display, 10)
 meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, display)
 zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, display)
+alert = MeetingAlert(duration_s=secrets.get("alert_duration_s", 5), cadence_s=secrets.get("alert_cadence_s", 1))
+alert_renderer = meeting_alert.MeetingAlertRenderer(cal_events, display, alert)
 
 gc.collect()
 print("Mem Free: {} bytes (init)".format(gc.mem_free()))
@@ -139,13 +142,28 @@ async def event_fetcher():
         print("Mem Free: {} bytes (event_fetcher)".format(gc.mem_free()))
         await asyncio.sleep(300)
 
+
+async def alert_runner():
+    while True:
+        now = utc_to_local(time.localtime(), cal_events.tz)
+        started = alert.on_tick(cal_events, now)
+        if started:
+            alert_renderer.mark_started(now)
+        if alert.is_active(now):
+            alert_renderer.render(now)
+            display.commit()
+        gc.collect()
+        print("Mem Free: {} bytes (alert_runner)".format(gc.mem_free()))
+        await asyncio.sleep(alert.cadence_s)
 async def ticker():
     while True:
+        now = utc_to_local(time.localtime(), cal_events.tz)
         #day_renderer.render(time.localtime())
-        half_day_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
+        half_day_renderer.render(now)
         #zoom_day_renderer.render(time.localtime())
-        meeting_countdown_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
-        meeting_time_left_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
+        if not alert.is_active(now):
+            meeting_countdown_renderer.render(now)
+            meeting_time_left_renderer.render(now)
         # display.progress((time.localtime().tm_min/60), justified="right")
         display.commit()
 
@@ -181,11 +199,12 @@ async def button_listener():
 async def main():
     refresh_token_task = asyncio.create_task(refresh_token_runner())
     event_fetcher_task = asyncio.create_task(event_fetcher())
+    alert_task = asyncio.create_task(alert_runner())
     ticker_task = asyncio.create_task(ticker())
     button_task = asyncio.create_task(button_listener())
     
     await asyncio.gather(
-        refresh_token_task, event_fetcher_task, ticker_task, button_task
+        refresh_token_task, event_fetcher_task, alert_task, ticker_task, button_task
     )
 
 try:
