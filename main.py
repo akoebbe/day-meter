@@ -1,6 +1,8 @@
 import board
 import socketpool
 import time
+
+
 import rtc
 import wifi
 import asyncio
@@ -9,7 +11,8 @@ from renderers import static_day_renderer, static_half_day_renderer, meeting_cou
 import ssl
 import adafruit_requests
 import gc
-from adafruit_io.adafruit_io import IO_HTTP
+import adafruit_ntp
+from posix_tz import parse_posix_tz, utc_to_local
 from events import EventsRepository
 import digitalio
 from adafruit_debouncer import Button
@@ -62,21 +65,12 @@ print("Mem Free: {} bytes (request init)".format(gc.mem_free()))
 
 display.progress(0.5, commit=True)
 while True:
-    print("Getting time from Adafruit.io internet")
+    print("Getting time from NTP")
     try:
-        # ntp = adafruit_ntp.NTP(pool, tz_offset=0)
-        # rtc.RTC().datetime = ntp.datetime
-
-        aio_username = secrets["aio_username"]
-        aio_key = secrets["aio_key"]
-        location = secrets.get("timezone", None)
-        io = IO_HTTP(aio_username, aio_key, requests)
-
-        rtc.RTC().datetime = io.receive_time()
-        # del IO_HTTP, io, location, aio_key, aio_username
+        ntp = adafruit_ntp.NTP(pool)
+        rtc.RTC().datetime = ntp.datetime
         gc.collect()
-        print("Mem Free: {} bytes (adafruit io)".format(gc.mem_free()))
-
+        print("Mem Free: {} bytes (ntp)".format(gc.mem_free()))
         break
     except Exception as inst:
         print(inst, "(Retrying)")
@@ -110,8 +104,11 @@ print("Mem Free: {} bytes (google token)".format(gc.mem_free()))
 print("\n----------------------------------------\n")
 
 display.progress(1, commit=True)
-
-cal_events = EventsRepository(filter_out_of_office=secrets.get("filter_out_of_office", False))
+try:
+    tz = parse_posix_tz(secrets.get("timezone"))
+except (ValueError, TypeError, AttributeError):
+    tz = None
+cal_events = EventsRepository(tz=tz, filter_out_of_office=secrets.get("filter_out_of_office", False))
 #day_renderer = static_day_renderer.StaticDayRenderer(cal_events, display)
 half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, display, 8)
 meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, display, 10)
@@ -145,10 +142,10 @@ async def event_fetcher():
 async def ticker():
     while True:
         #day_renderer.render(time.localtime())
-        half_day_renderer.render(time.localtime())
+        half_day_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
         #zoom_day_renderer.render(time.localtime())
-        meeting_countdown_renderer.render(time.localtime())
-        meeting_time_left_renderer.render(time.localtime())
+        meeting_countdown_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
+        meeting_time_left_renderer.render(utc_to_local(time.localtime(), cal_events.tz))
         # display.progress((time.localtime().tm_min/60), justified="right")
         display.commit()
 

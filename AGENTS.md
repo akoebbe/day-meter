@@ -22,7 +22,8 @@ on-device `lib/` as authoritative rather than re-pinning from it blindly.
    into root without an explicit content diff review. See `.agents/notes/snapshot-timeline.md`
    for provenance evidence.
 2. **Secrets handling is critical.** `mysecrets.py` contains live credentials
-   (WiFi, Google OAuth client + access/refresh tokens, Google Calendar ID, Adafruit IO keys).
+   (WiFi, Google OAuth client + access/refresh tokens, Google Calendar ID, timezone;
+   Adafruit IO keys are no longer used — NTP replaced the old time-sync path).
    - Never print its values, include them in diffs/summaries/commits/logs, or echo them anywhere.
    - When a diff touches `mysecrets.py`, report that *it differs* without showing contents.
    - **Do not copy `mysecrets.py` from any backup** — snapshots contain different (likely stale)
@@ -62,8 +63,8 @@ on-device `lib/` as authoritative rather than re-pinning from it blindly.
 Boot sequence (top of `main.py`), each step in a retry loop with yellow bargraph feedback:
 
 1. WiFi connect (secrets from `mysecrets.secrets`).
-2. RTC set via Adafruit IO: `IO_HTTP(...).receive_time()` — **geolocated time, UTC fallback**
-   (`adafruit_ntp` is imported-but-commented out; do not assume NTP).
+2. RTC set via NTP: `adafruit_ntp.NTP(pool).datetime` — **UTC** (device RTC holds UTC;
+   local conversion happens in app code, not at the hardware layer).
 3. Google OAuth token refresh: `gcal.refresh_token()` (OAuth2 refresh grant via `adafruit_oauth2`).
 4. Async app loop (`asyncio.run(main())`); any unhandled exception resets the whole board by design.
 
@@ -83,21 +84,25 @@ Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via the inje
 - `StaticDayRenderer` — instantiated but **not** in the active ticker (commented out).
 - `MeetingCombined` — orphaned/experimental; not imported by `main.py`.
 
-Data model: `EventsRepository.EVENTS` holds lists of `{"start", "end"}` as naive `time.struct_time`,
-converted from Google's UTC ISO strings (`iso_to_time_struct` strips the `Z`). All-day events are
-filtered out unconditionally; Google out-of-office events are filtered only when
-`secrets["filter_out_of_office"]` is true (opt-in, default off — `EventsRepository` takes a
-`filter_out_of_office` kwarg, wired at `main.py`).
+Data model: `EventsRepository.EVENTS` holds lists of `{"start", "end"}` as naive `time.struct_time`.
+Events arrive as UTC ISO strings from Google; `iso_to_time_struct` strips the `Z`, then
+`utc_to_local` (from `posix_tz.py`) converts to local wall-clock time at store time
+(`load_events_from_google`). All-day events are filtered out unconditionally; Google out-of-office
+events are filtered only when `secrets["filter_out_of_office"]` is true (opt-in, default off —
+`EventsRepository` takes a `filter_out_of_office` kwarg, wired at `main.py`).
 
 ## Conventions & gotchas
 
 - Follow existing style: `str.format()`, module-level driver objects, `gc.collect()` + memory log
   after heavy stages (2MB PSRAM board — avoid unbounded data; close HTTP responses).
-- **Time handling is delicate and partly inconsistent.** `secrets["timezone"]` (`America/Chicago`)
-  is read into an unused variable in `main.py`; `base_renderer.py` has dead `UTC_OFFSET = -5` code;
-  event times are UTC-parsed while comparisons use local `time.localtime()`. Whatever the exact
-  behavior on-device, **verify time assumptions before editing anything date/time related**, and
-  do not "clean up" these without confirming what actually renders correctly.
+- **Time handling is UTC-native; local conversion is explicit.** Device RTC holds UTC (NTP, no offset).
+  `secrets["timezone"]` is a POSIX TZ string (e.g. `CST6CDT,M3.2.0/2:00,M11.1.0/2:00`);
+  `main.py` parses it via `posix_tz.parse_posix_tz` (try/except → `tz=None` fallback = identity).
+  `EventsRepository` converts events UTC→local at store (`load_events_from_google`) and converts
+  `now` to local at query (`get_current_event`/`get_next_event`); all comparisons are local-vs-local.
+  `base_renderer.py` still has dead `UTC_OFFSET = -5` code (unused, harmless).
+  **Verify time assumptions before editing anything date/time related** — the B2 conversion point
+  (store vs. query) must stay consistent across the codebase.
 - `display/` (F1 seam): `frame_math.py` = pure stdlib frame math (plain lists, no
   numpy); `base.py` = `Display` contract (`set_frame` / `set_frame_from_text` / `progress`
   / `commit` — the three renderer methods are frozen by the test suite);
@@ -106,7 +111,9 @@ filtered out unconditionally; Google out-of-office events are filtered only when
   `secrets["display"]` (default `bicolor24`; unknown name → `ValueError` at boot).
   `WifiAnimation` remains dormant (`wifi_animation = False`) and **buggy** — it calls
   `WifiAnimation.tick()` without an instance. Fix before ever enabling it.
-- Google Calendar call in `gcal.py`: REST GET with `singleEvents=true`, `fields=items(start,end,eventType)`.
+- Google Calendar call in `gcal.py`: REST GET with `timeZone=UTC`, `singleEvents=true`,
+  `fields=items(start,end,eventType)`. `timeZone=UTC` is required because `iso_to_time_struct`
+  strips `Z` only — it never parses offsets.
   One-time re-auth: uncomment the `gcal.initialize_client_keys()` line in `main.py` (device-code flow;
   prints URL + code, then outputs tokens to paste into `mysecrets.py`).
 - `settings.toml` is currently an empty file (gitignored upstream); nothing reads it yet.
@@ -136,9 +143,11 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
   event rendering) lives at `.agents/notes/features/roadmap.md`.
 - The desktop automated test system for renderers (golden-frame tests, stdlib `unittest`, GitHub Actions CI)
   is planned in `.agents/notes/dev-testing-plan.md`; it lands before feature work begins.
-- Shared architectural seams serving both: a display abstraction (pure frame math + driver adapters),
-  injectable clock into repository queries, and resolution of the time/timezone gotcha above — see
-  "Shared seams" in roadmap.md. Each feature gets its own `.agents/notes/features/<topic>.md` when scoped.
+- Shared architectural seams: a display abstraction (pure frame math + driver adapters — **shipped**,
+  see `display/` package), injectable clock into repository queries (**shipped** — `now=` kwarg on
+  `get_current_event`/`get_next_event`), and UTC-native time handling (**shipped** — POSIX TZ, B2
+  conversion at store, see gotchas above). Each feature gets its own
+  `.agents/notes/features/<topic>.md` when scoped.
 
 ## Agent state directory
 

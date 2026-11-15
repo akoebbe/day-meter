@@ -48,13 +48,12 @@ currently orphaned in `renderers/meeting_combined.py`.
 
 ## Shared seams these features all lean on
 
-1. **Display abstraction** (F1, plus the desktop test system): pure frame logic + driver adapters. *(seam shipped: `display/` package — `frame_math` pure, `Display` contract, `Bicolor24Adapter` first adapter; concrete new-display adapters remain.)*
-2. **Deterministic clock injection**: `render(now)` already exists; repository queries still call
-   `time.localtime()` internally (`get_current_event`, `get_next_event`) — needs injectable now
-   before any renderer feature can be tested reliably or extended (affects F1–F4 and the test plan).
-3. **Time/timezone resolution**: current handling mixes UTC-parsed events with local `localtime()`
-   (see AGENTS.md gotchas). Any feature that re-derives times from "now" should settle this first;
-   golden tests pin *current* behavior so changes are deliberate and visible.
+1. **Display abstraction** (F1, plus the desktop test system): pure frame logic + driver adapters. *(shipped: `display/` package — `frame_math` pure, `Display` contract, `Bicolor24Adapter` first adapter; concrete new-display adapters remain.)*
+2. **Deterministic clock injection**: `render(now)` already existed; `get_current_event`/`get_next_event`
+   now take `now=None` (default = `utc_to_local(time.localtime(), self.tz)`). *(shipped.)*
+3. **Time/timezone resolution**: device RTC holds UTC (NTP); events convert UTC→local at store
+   (`load_events_from_google`) via `posix_tz.utc_to_local`; `now` converts to local at query.
+   `tz=None` = identity (original behavior). *(shipped: POSIX TZ, B2 conversion.)*
 
 ## Dependency notes (not priorities)
 

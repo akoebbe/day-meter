@@ -14,3 +14,6 @@ lib/*
 mysecrets.py
 backups/
 __pycache__/
+# IDE / editor artifacts
+.pi/
+.rpiv/

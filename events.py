@@ -1,12 +1,14 @@
 import time
+from posix_tz import utc_to_local
 
 class EventsRepository():
 
     # TODO: Make this a class
     EVENTS = []
 
-    def __init__(self, filter_out_of_office=False):
+    def __init__(self, tz=None, filter_out_of_office=False):
         self.EVENTS = []
+        self.tz = tz
         self._filter_out_of_office = filter_out_of_office
 
     def load_events(self, events_list):
@@ -16,12 +18,15 @@ class EventsRepository():
         new_events = []
         for g_event in g_events:
             if self._is_storable_g_event(g_event):
-                new_events.append({"start": iso_to_time_struct(g_event["start"]["dateTime"]), "end": iso_to_time_struct(g_event["end"]["dateTime"])})
+                s = utc_to_local(iso_to_time_struct(g_event["start"]["dateTime"]), self.tz)
+                e = utc_to_local(iso_to_time_struct(g_event["end"]["dateTime"]), self.tz)
+                new_events.append({"start": s, "end": e})
+        new_events.sort(key=lambda e: e["start"])
         self.EVENTS = new_events
 
     def get_current_event(self, now=None):
         if now is None:
-            now = time.localtime()
+            now = utc_to_local(time.localtime(), self.tz)
         
         current_events = [event for event in self.EVENTS if event["start"] < now and event["end"] > now]
         if len(current_events) > 0:
@@ -37,13 +42,15 @@ class EventsRepository():
             
         found = [event for event in self.EVENTS if event["start"] >= start and event["start"] < end]
         
-        print("Found {0} events between {1} and {2}".format(len(found), time_struct_to_iso(start), time_struct_to_iso(end)))
+        frame_label = "local time" if self.tz is not None else "UTC"
+        print("Found {0} events between {1} and {2} ({3})".format(
+            len(found), time_struct_to_local_iso(start), time_struct_to_local_iso(end), frame_label))
         
         return found
 
     def get_next_event(self, now=None):
         if now is None:
-            now = time.localtime()
+            now = utc_to_local(time.localtime(), self.tz)
         
         upcoming_events = [event for event in self.EVENTS if event["start"] > now]
         if len(upcoming_events) > 0:
@@ -73,6 +80,12 @@ def time_struct_to_iso(time):
         time[4],
         time[5],
         "Z",
+    )
+
+def time_struct_to_local_iso(time):
+    """Format a local (device) wall-clock struct_time for logging; no UTC designator."""
+    return "{:04d}-{:02d}-{:02d}T{:02d}:{:02d}:{:02d}".format(
+        time[0], time[1], time[2], time[3], time[4], time[5],
     )
 
 def iso_to_time_struct(datetime):
