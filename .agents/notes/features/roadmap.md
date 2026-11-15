@@ -46,6 +46,43 @@ the renderer contract needs a defined policy for combining them (stacked fills? 
 dedicated multi-event screen?). This also makes `MeetingCombined`'s direction relevant again — it is
 currently orphaned in `renderers/meeting_combined.py`.
 
+## F5. Configurable half-day renderer window start hour (day-boundary wrap)
+
+Today: `StaticHalfDayRenderer` takes a `start_hour` kwarg (wired at `main.py` as `8`), but the
+12-hour window is computed with `start_of_hour(now, start_hour)` / `end_of_hour(now, start_hour + 11)`
+— both on the same calendar date. If `start_hour ≥ 13`, the end hour exceeds 23 and
+`struct_time` is invalid (no day-boundary wrap).
+
+Feature: owner-configurable start hour (new secret key, e.g. `half_day_start_hour`, default `8`).
+The 12-hour window must wrap when it crosses midnight: `start_hour=18` → window
+`18:00:00` → `05:59:59` next day.
+
+Architecture surface:
+- `events.start_of_hour` / `end_of_hour` don't handle day overflow — either make them day-boundary
+  aware, or compute the end in `StaticHalfDayRenderer` with an explicit date increment.
+- New secret key in `secrets.py.dist`; wired at `main.py` renderer instantiation.
+- Test: a window that wraps midnight returns events from both calendar days.
+
+## F6. Meeting-start alert animation
+
+When a meeting begins, the display plays a brief animation (≈5 s) before falling back to the
+regular display (e.g. `MeetingTimeLeft`).
+
+Architecture surface:
+- **Width-resizability (hard requirement):** `MeetingCountdown`, `MeetingTimeLeft`, and the new
+  alert renderer must each be resizable to **full width (24)**, **half width (12)**, and
+  **1/3 width (8)** LEDs. The display is partitioned into up to 3 equal-width columns; a renderer
+  emits its frame scaled to its assigned width (LED-index mapping scales with width). Requires the
+  `Display` contract / `frame_math` to support sub-width rendering — renderers currently emit fixed
+  24-char frames. This is what lets the alert (or the alert plus a regular renderer) share the display.
+- A new alert renderer (or a display-level state machine in the ticker) that detects the transition
+  to a new current event (`get_current_event` returns a different event than on the previous tick)
+  and renders an animation sequence for a fixed duration.
+- The ticker loop needs transient alert state: on event-start transition, switch to the alert
+  renderer for N ticks (≈5 s at the current 5-s cadence = 1 tick; configurable), then resume.
+- Animation pattern (e.g. a sweep, blink, or fill) — scope when implementing.
+- Interacts with F4 (concurrent events): if multiple events start simultaneously, alert once.
+
 ## Shared seams these features all lean on
 
 1. **Display abstraction** (F1, plus the desktop test system): pure frame logic + driver adapters. *(shipped: `display/` package — `frame_math` pure, `Display` contract, `Bicolor24Adapter` first adapter; concrete new-display adapters remain.)*

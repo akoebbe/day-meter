@@ -138,9 +138,10 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
 
 ## Planned features & development testing
 
-- Backlog of four planned features (**not in priority order** — other display types beyond the bargraph;
+- Backlog of six planned features (**not in priority order** — other display types beyond the bargraph;
   additional calendar sources such as Outlook; physical button/rotary-encoder input; overlapping/concurrent
-  event rendering) lives at `.agents/notes/features/roadmap.md`.
+  event rendering; configurable half-day window start hour; meeting-start alert animation) lives at
+  `.agents/notes/features/roadmap.md`.
 - The desktop automated test system for renderers (golden-frame tests, stdlib `unittest`, GitHub Actions CI)
   is planned in `.agents/notes/dev-testing-plan.md`; it lands before feature work begins.
 - Shared architectural seams: a display abstraction (pure frame math + driver adapters — **shipped**,
