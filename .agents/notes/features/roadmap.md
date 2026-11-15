@@ -67,6 +67,10 @@ Architecture surface:
 
 When a meeting begins, the display plays a brief animation (≈5 s) before falling back to the
 regular display (e.g. `MeetingTimeLeft`).
+> **Status:** scoped in `.agents/notes/features/meeting-start-alert.md` (detection via
+`get_events_starting_between` on `[prev, now)` windows, `MeetingAlert` controller,
+width-capable renderers, faster alert cadence). v1 = full-width alert then fallback;
+side-by-side column layout is the follow-on.
 
 Architecture surface:
 - **Width-resizability (hard requirement):** `MeetingCountdown`, `MeetingTimeLeft`, and the new
