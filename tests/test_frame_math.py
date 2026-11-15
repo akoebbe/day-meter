@@ -51,3 +51,52 @@ class DiffTest(unittest.TestCase):
     def test_length_mismatch_raises(self):
         with self.assertRaises(ValueError):
             frame_math.diff([0] * 24, [0] * 23)
+
+class ComposeTest(unittest.TestCase):
+    def test_tiles_24_as_8_plus_16(self):
+        a = frame_math.progress_frame(8, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(16, 0.5, "r", PALETTE)
+        frame = frame_math.compose([(0, a), (8, b)])
+        self.assertEqual(frame, [1] * 8 + [2] * 8 + [0] * 8)
+
+    def test_tiles_24_as_12_plus_12(self):
+        a = frame_math.progress_frame(12, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(12, 0.0, "y", PALETTE)
+        frame = frame_math.compose([(0, a), (12, b)])
+        self.assertEqual(frame, [1] * 12 + [0] * 12)
+
+    def test_full_width_single_region(self):
+        a = frame_math.progress_frame(24, 0.5, "g", PALETTE)
+        frame = frame_math.compose([(0, a)])
+        self.assertEqual(frame, [1] * 12 + [0] * 12)
+
+    def test_three_equal_columns(self):
+        a = frame_math.progress_frame(8, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(8, 1.0, "r", PALETTE)
+        c = frame_math.progress_frame(8, 1.0, "y", PALETTE)
+        frame = frame_math.compose([(0, a), (8, b), (16, c)])
+        self.assertEqual(frame, [1] * 8 + [2] * 8 + [3] * 8)
+
+    def test_gap_raises(self):
+        a = frame_math.progress_frame(8, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(15, 0.5, "r", PALETTE)
+        with self.assertRaises(ValueError):
+            frame_math.compose([(0, a), (8, b)])
+
+    def test_overlap_raises(self):
+        a = frame_math.progress_frame(8, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(16, 0.5, "r", PALETTE)
+        with self.assertRaises(ValueError):
+            frame_math.compose([(0, a), (7, b)])
+
+    def test_region_extends_beyond_led_count_raises(self):
+        b = frame_math.progress_frame(16, 0.5, "r", PALETTE)
+        with self.assertRaises(ValueError):
+            frame_math.compose([(0, b)], led_count=8)
+
+    def test_custom_led_count(self):
+        a = frame_math.progress_frame(6, 1.0, "g", PALETTE)
+        b = frame_math.progress_frame(6, 1.0, "r", PALETTE)
+        frame = frame_math.compose([(0, a), (6, b)], led_count=12)
+        self.assertEqual(len(frame), 12)
+        self.assertEqual(frame, [1] * 6 + [2] * 6)
