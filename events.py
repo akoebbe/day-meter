@@ -34,17 +34,18 @@ class EventsRepository():
         
         return None
     
-    def get_events_starting_between(self, start, end):
+    def get_events_starting_between(self, start, end, log=True):
         if isinstance(start, int):
             start = time.localtime(start)
         if isinstance(end, int):
             end = time.localtime(end)
-            
+
         found = [event for event in self.EVENTS if event["start"] >= start and event["start"] < end]
-        
-        frame_label = "local time" if self.tz is not None else "UTC"
-        print("Found {0} events between {1} and {2} ({3})".format(
-            len(found), time_struct_to_local_iso(start), time_struct_to_local_iso(end), frame_label))
+
+        if log:
+            frame_label = "local time" if self.tz is not None else "UTC"
+            print("Found {0} events between {1} and {2} ({3})".format(
+                len(found), time_struct_to_local_iso(start), time_struct_to_local_iso(end), frame_label))
         
         return found
 
