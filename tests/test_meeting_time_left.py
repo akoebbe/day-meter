@@ -98,6 +98,29 @@ class MeetingTimeLeftTests(unittest.TestCase):
         self.assertEqual(rec.frames, [])
         self.assertIsNone(rec.last_frame)
 
+    def _frame(self, event_tuples, width):
+        repo = events.EventsRepository()
+        repo.load_events([{"start": st(*s), "end": st(*e)} for (s, e) in event_tuples])
+        recorder = FrameRecorder()
+        renderer = MeetingTimeLeft(repo, recorder, width)
+        with freeze_clock(NOW):
+            return renderer.frame(NOW)
+
+    def test_width_24_half_red_via_frame(self):
+        # Mid-meeting (09:00-10:00 from 09:30) -> pct .5; width 24 -> 12 trailing red.
+        frame = self._frame([((2026, 11, 11, 9, 0, 0), (2026, 11, 11, 10, 0, 0))], 24)
+        self.assertEqual(frame_ascii(frame), "." * 12 + "r" * 12)
+
+    def test_width_12_half_red(self):
+        # Same mid-meeting event (pct .5) at width 12 -> floor(6) trailing red.
+        frame = self._frame([((2026, 11, 11, 9, 0, 0), (2026, 11, 11, 10, 0, 0))], 12)
+        self.assertEqual(frame_ascii(frame), "." * 6 + "r" * 6)
+
+    def test_width_8_half_red(self):
+        # Same mid-meeting event (pct .5) at width 8 -> floor(4) trailing red.
+        frame = self._frame([((2026, 11, 11, 9, 0, 0), (2026, 11, 11, 10, 0, 0))], 8)
+        self.assertEqual(frame_ascii(frame), "." * 4 + "r" * 4)
+
 
 if __name__ == "__main__":
     unittest.main()

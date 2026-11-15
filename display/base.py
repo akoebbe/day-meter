@@ -23,10 +23,13 @@ class Display:
         """Map chars via PALETTE and write the frame (no commit)."""
         self.set_frame(frame_math.frame_from_text(text, self.PALETTE))
 
-    def progress(self, pct=.5, color="g", justified="left", commit=False):
-        """Compute and return a progress frame (no commit unless commit=True)."""
+    def progress(self, pct=.5, color="g", justified="left", commit=False, width=None):
+        """Compute and return a progress frame (no commit unless commit=True).
+
+        width overrides the LED count (resizable frames); defaults to LED_COUNT.
+        """
         frame = frame_math.progress_frame(
-            self.LED_COUNT, pct, color, self.PALETTE, justified)
+            width if width is not None else self.LED_COUNT, pct, color, self.PALETTE, justified)
         if commit:
             self.set_frame(frame)
             self.commit()

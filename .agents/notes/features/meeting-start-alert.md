@@ -160,20 +160,18 @@ def compose(regions):
 - The **layout** (who gets which column) composes and calls `display.set_frame(combined)`
   + `display.commit()`. Renderers never push sub-width frames at the adapter directly.
 
-### F6 v1 layout policy (conservative choice)
+### F6 v1 layout policy (decided)
 
-**v1 = full-width alert.** While the alert is active the display shows the alert
+**v1 = full-width alert (decided).** While the alert is active the display shows the alert
 renderer at full width (24). After expiry it falls back to the regular full-width
 display (`MeetingTimeLeft`). This meets the requirement ("alert for 5 s then fallback")
 and needs **no** side-by-side composition in v1 — the resizable capability (width +
 `frame()` + `compose`) is delivered and unit-tested, and side-by-side is enabled by the
 same seam for the next layout.
 
-> **Decision to confirm:** is v1 the full-width alert (recommended, minimal refactor,
-> golden tests stay green), or do you want the alert laid out **side-by-side** with a
-> regular renderer in v1 (e.g. alert = 1/3 column + `MeetingTimeLeft` = 2/3)? The
-> capability is in place either way; only the v1 layout + a small `compose`/layout step
-> differ. Side-by-side is the natural end-state.
+**Decision (locked):** v1 is the full-width alert — minimal refactor, golden tests stay
+green. Side-by-side (alert = 1/3 column + regular renderer = 2/3) is the follow-on layout,
+enabled by the same width / `compose` seam (phase 4, not part of v1).
 
 ### Alert state flow
 

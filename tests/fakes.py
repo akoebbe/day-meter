@@ -51,11 +51,12 @@ class FrameRecorder(object):
         mapped = [COLOR_MAP[c] for c in text]
         self.set_frame(mapped)
 
-    def progress(self, pct=.5, color="g", justified="left"):
+    def progress(self, pct=.5, color="g", justified="left", width=None):
         # Mirror of bargraph.progress fill math (bargraph.py:36-48); no commit arg.
-        led_count = floor(24 * pct)
-        frame = [OFF] * 24
-        frame[:led_count] = [COLOR_MAP[color]] * led_count
+        led_count = width if width is not None else 24
+        filled = floor(led_count * pct)
+        frame = [OFF] * led_count
+        frame[:filled] = [COLOR_MAP[color]] * filled
         if justified == "right":
             frame = frame[::-1]     # bargraph flips the whole frame (np.flip)
         return frame
