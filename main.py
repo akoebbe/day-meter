@@ -7,7 +7,7 @@ import rtc
 import wifi
 import asyncio
 import gcal
-from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer, meeting_alert
+from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer, meeting_alert, stack as stack_mod
 from meeting_alert_controller import MeetingAlert
 import ssl
 import adafruit_requests
@@ -117,6 +117,11 @@ meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, displ
 zoom_day_renderer = zoom_day_renderer.ZoomDayRenderer(cal_events, display)
 alert = MeetingAlert(duration_s=secrets.get("alert_duration_s", 5), cadence_s=secrets.get("alert_cadence_s", 1))
 alert_renderer = meeting_alert.MeetingAlertRenderer(cal_events, display, alert)
+# Display layer stack (topmost-wins; single commit per layer)
+alert_layer = stack_mod.AlertLayer(alert, alert_renderer, cadence_s=secrets.get("alert_cadence_s", 0.2))
+meetings_layer = stack_mod.MeetingsLayer(cal_events, meeting_countdown_renderer, meeting_time_left_renderer, cadence_s=5)
+base_layer = stack_mod.BaseLayer([half_day_renderer], cadence_s=5)
+stack = [alert_layer, meetings_layer, base_layer]
 
 gc.collect()
 print("Mem Free: {} bytes (init)".format(gc.mem_free()))
@@ -149,27 +154,21 @@ async def alert_runner():
         started = alert.on_tick(cal_events, now)
         if started:
             alert_renderer.mark_started(now)
-        if alert.is_active(now):
-            alert_renderer.render(now)
-            display.commit()
+        alert_layer.paint(now, display)
         gc.collect()
         print("Mem Free: {} bytes (alert_runner)".format(gc.mem_free()))
-        await asyncio.sleep(alert.cadence_s)
-async def ticker():
+        await asyncio.sleep(secrets.get("alert_cadence_s", 0.2))
+
+
+async def base_runner():
     while True:
         now = utc_to_local(time.localtime(), cal_events.tz)
-        #day_renderer.render(time.localtime())
-        half_day_renderer.render(now)
-        #zoom_day_renderer.render(time.localtime())
         if not alert.is_active(now):
-            meeting_countdown_renderer.render(now)
-            meeting_time_left_renderer.render(now)
-        # display.progress((time.localtime().tm_min/60), justified="right")
-        display.commit()
-
+            for layer in (meetings_layer, base_layer):
+                if layer.paint(now, display):
+                    break
         gc.collect()
-        print("Mem Free: {} bytes (ticker)".format(gc.mem_free()))
-
+        print("Mem Free: {} bytes (base_runner)".format(gc.mem_free()))
         await asyncio.sleep(5)
 
 async def calendar_checker():
@@ -200,11 +199,11 @@ async def main():
     refresh_token_task = asyncio.create_task(refresh_token_runner())
     event_fetcher_task = asyncio.create_task(event_fetcher())
     alert_task = asyncio.create_task(alert_runner())
-    ticker_task = asyncio.create_task(ticker())
+    base_task = asyncio.create_task(base_runner())
     button_task = asyncio.create_task(button_listener())
-    
+
     await asyncio.gather(
-        refresh_token_task, event_fetcher_task, alert_task, ticker_task, button_task
+        refresh_token_task, event_fetcher_task, alert_task, base_task, button_task
     )
 
 try:

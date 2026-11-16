@@ -72,8 +72,11 @@ Boot sequence (top of `main.py`), each step in a retry loop with yellow bargraph
 |---|---|---|
 | `refresh_token_runner` | every 15 min (`gcal.REFRESH_TIME`) | keeps Google access token valid |
 | `event_fetcher` | every 300 s | pulls calendar events (yesterday→tomorrow window, max 40) into `EventsRepository` |
-| `ticker` | every 5 s | renders active screens, then `display.commit()` |
+| `alert_runner` | every `alert_cadence_s` (default 0.2 s) | detects meeting starts (`alert.on_tick` + `alert_renderer.mark_started`); paints the alert layer (topmost) |
+| `base_runner` | every 5 s | paints the meetings/base layers, gated off while the alert is active |
 | `button_listener` | continuous | boot button cycles `ZoomDayRenderer` zoom level |
+
+Display is driven by a **topmost-wins layer stack** (`renderers/stack.py`, stdlib-only). Three layers, top first: `alert_layer` (occupied while `alert.is_active(now)`) → `meetings_layer` (occupied when the countdown or time-left has a frame) → `base_layer` (always occupied; `half_day_renderer`). Each layer's `paint()` is the single commit point — if occupied it draws + `display.commit()`, else no write. The two runners own disjoint layers (alert runner → alert layer only; base runner → the lower two, gated by `not alert.is_active(now)`), so their cadences are decoupled and the alert owns the commit while active.
 
 Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via the injected `Display` (`display/base.py`)):
 
@@ -149,6 +152,7 @@ Four snapshots under `backups/day_meter-*`. Verified findings (method + details 
   `get_current_event`/`get_next_event`), and UTC-native time handling (**shipped** — POSIX TZ, B2
   conversion at store, see gotchas above). Each feature gets its own
   `.agents/notes/features/<topic>.md` when scoped.
+- The topmost-wins **layer stack** (`renderers/stack.py`) — **shipped**: three layers (alert / meetings / base), single commit point per layer, cadences decoupled (smooth alert sweep at `alert_cadence_s`, base/meetings at 5 s). See the Architecture section above.
 
 ## Agent state directory
 

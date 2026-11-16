@@ -10,6 +10,6 @@ class MeetingTimeLeft(BaseRenderer):
             sec_total = time.mktime(current_event['end']) - time.mktime(current_event['start'])
             sec_left = time.mktime(current_event['end']) - time.mktime(now)
             pct = sec_left/sec_total
-            print("Meetings is {0}/{1} seconds complete, {2}% time left".format(sec_left, sec_total, pct * 100))
+            print("Meeting elapsed {0}/{1} s, {2:.1f}% left".format(sec_total - sec_left, sec_total, pct * 100))
             return self.bargraph.progress(pct, "r", "right", width=self.width)
         return None
