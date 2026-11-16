@@ -115,8 +115,10 @@ events are filtered only when `secrets["filter_out_of_office"]` is true (opt-in,
   `WifiAnimation` remains dormant (`wifi_animation = False`) and **buggy** — it calls
   `WifiAnimation.tick()` without an instance. Fix before ever enabling it.
 - Google Calendar call in `gcal.py`: REST GET with `timeZone=UTC`, `singleEvents=true`,
-  `fields=items(start,end,eventType)`. `timeZone=UTC` is required because `iso_to_time_struct`
-  strips `Z` only — it never parses offsets.
+  `orderBy=startTime`, `fields=items(start,end,eventType)`. `timeZone=UTC` is required because `iso_to_time_struct`
+  strips `Z` only — it never parses offsets. `orderBy=startTime` is **required**: without it Google returns an
+  "unspecified, stable order" — empirically a *partial* page that omits newly-created events (root cause of the
+  2026-11-15 missing-events bug, see `.agents/notes/bug-repo-drops-to-1-of-3-events.md`).
   One-time re-auth: uncomment the `gcal.initialize_client_keys()` line in `main.py` (device-code flow;
   prints URL + code, then outputs tokens to paste into `mysecrets.py`).
 - `settings.toml` is currently an empty file (gitignored upstream); nothing reads it yet.

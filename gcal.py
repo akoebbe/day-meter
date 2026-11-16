@@ -128,6 +128,7 @@ def get_calendar_events():
         "https://www.googleapis.com/calendar/v3/calendars/{0}/events"
         "?maxResults={1}"
         "&singleEvents=true"
+        "&orderBy=startTime"
         "&timeZone=UTC"
         "&timeMin={2}"
         "&timeMax={3}"

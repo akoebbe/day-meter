@@ -1,34 +1,39 @@
 # Bug: repo drops to 1 of 3 events → 2 meetings not rendered
 
 - **Date observed:** 2026-11-15, ~16:30+ local, running F6 alert code on the ESP32.
-- **Status:** triaged, root cause NOT yet confirmed. **Open.**
-- **Priority:** medium (correctness — silent data loss of scheduled meetings; unrelated to the layer/alert work in progress).
+- **Status:** **RESOLVED** (2026-11-15). Root cause confirmed and fixed.
+- **Priority:** was medium (correctness — silent data loss of scheduled meetings).
 
 ## Symptom
 
-Console logs `Found 1 event between 08:00 and 19:59:59` where there are 3 events that day (9:00, 10:30, 16:30). Only the 9 a.m. LED is lit; the 10:30 (LED 5) and 4:30 (LED 17) LEDs are dark.
+Console logs `Found 1 event between 08:00 and 19:59:59` where there are 3+ events that day. Only the earliest LED is lit; the later events are dark. Adding brand-new events to the calendar did not change the fetch result at all.
 
-## Key facts
+## Root cause (confirmed)
 
-- The `Found N events` line is the **half-day renderer's** `get_events_starting_between(08:00, 19:59:59)` logging — it reads the **repo**, not Google directly. So the repo held only the 9 a.m. event at that instant.
-- At 16:30 the repo had **all three** (the same log printed "Found 3 events"). The only mutator of the repo is `event_fetcher` (every 300 s) → a **later fetch** replaced the repo with just the 9 a.m. event. So the Google fetch is now returning only that one event.
-- This is a **fetch/data** issue, independent of the layer-model / alert design being discussed.
+The Google `events.list` call in `gcal.py` **did not request an ordering**, so Google returned results in its *"unspecified, stable order"* — which empirically is a **partial, non-chronological page** that omits newly-created events. With the same `calendarId`, `timeMin`/`timeMax` window, and `maxResults=40`, adding `orderBy=startTime` returned the **complete** set in ascending order.
 
-## Triage: likely causes (ranked)
+Decisive A/B on the device (2026-11-15), all else identical:
 
-1. **Fetch window no longer spans the 10:30 / 4:30 events.** AGENTS note says it *should* be yesterday→tomorrow (would include all three) — verify the actual `timeMin`/`timeMax` in `gcal.py`. If truly yesterday→tomorrow, window is *not* the cause → see #2/#3. If it's actually now-relative, day-progress explains it.
-2. **Google/token-side** — partial or rate-limited response, or the OAuth refresh returning a degraded event set, leaving only the 9 a.m. event.
-3. **A filter dropping the two** — if `secrets["filter_out_of_office"]` is on and the 10:30/4:30 events are OOO-tagged, they'd be filtered out, leaving the 9 a.m.
+| | `orderBy` | items | Nov-15 events present |
+|---|---|---|---|
+| Without | (none) | 24 | 1 of 7 (only `15:00Z`) |
+| With | `startTime` | 31 | all 7 (`14:00Z`–`22:30Z`) |
 
-Timezone/parse is **unlikely**: if parsing shifted times to UTC, the 9 a.m. event wouldn't land at its correct LED. Since 9a shows in the right slot, parsing looks correct → points at the fetch, not the parse.
+- Same `calendarId` (`andrew.koebbe@uniteus.com`), same window (`2026-11-15T00:00:00Z`–`2026-11-17T23:59:59Z`), same `maxResults=40` (31 < 40, no truncation), same OAuth token. The only variable was `orderBy`.
+- This **disproves** the earlier calendarId-mismatch hypothesis: the 9 a.m. event was showing *because* it happened to be the oldest/most-stable item in the unordered page, not because other events live on a different calendar.
+- Matches the documented behavior: *"The default is an unspecified, stable order"* and *"the number of events in the resulting page may be less than this value … even if there are more events matching the query."*
+- Corroborated by the identical field report: https://stackoverflow.com/questions/36317584/google-calendar-api-does-not-return-newly-created-events (same "remove orderBy → new events buried" mechanism; author restored `orderBy=startTime`).
 
-## Decisive check (not yet done)
+## Fix
 
-Print the raw `cal_events.EVENTS` on the device — the actual fetched `{start, end}` structs.
-- 10:30 and 4:30 **absent** → fetch isn't returning them (inspect `gcal` window / raw response).
-- Present but start-hours **outside** 08:00–19:59:59 → then it *is* the timezone/parse gotcha.
+`gcal.py` `get_calendar_events()`: added `&orderBy=startTime` to the `events.list` URL (chronological ascending, which is also the order the rest of the pipeline expects).
 
-## Follow-ups (when we resume)
+## Verification
 
-- Read `gcal.py` `timeMin`/`timeMax` and the repo filter path.
-- Confirm which of cause 1/2/3 via the raw `EVENTS` print.
+- Device A/B already showed the fix working before the code change: with `orderBy`, the half-day frame lit all 7 Nov-15 events (`2.22.2....2.2....2......`) vs. 1 without (`..2.....................`).
+- `python3 -m unittest discover tests` → 132/132 pass.
+
+## Related latent bugs (still open, separate concerns)
+
+1. **Pagination never read.** `gcal.py` never inspects `nextPageToken`. With `orderBy=startTime` the *first* page is chronological, but if a window ever holds >40 events the overflow is silent. Add pagination (loop on `nextPageToken`) before relying on large windows.
+2. **`fields=items(start,end,eventType)`** hides `summary`/`status`/`htmlLink`, which would have surfaced this bug (the missing events are identifiable, not just absent). Optional to widen for debuggability.
