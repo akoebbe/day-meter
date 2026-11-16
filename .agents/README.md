@@ -11,7 +11,7 @@ Layout convention:
   README.md                 (this file)
   notes/
     snapshot-timeline.md    backup provenance record (evidence-based; folder dates untrusted)
-    features/<topic>.md     future feature scopes — one file per topic, added as work starts
+    bug-repo-drops-to-1-of-3-events.md   open bug (2026-11-15): repo drops to 1 of 3 events, 2 meetings not rendered; triage + decisive check, root cause unconfirmed
 ```
 
 Rules of thumb:
