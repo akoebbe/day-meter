@@ -121,6 +121,41 @@ class MeetingTimeLeftTests(unittest.TestCase):
         frame = self._frame([((2026, 11, 11, 9, 0, 0), (2026, 11, 11, 10, 0, 0))], 8)
         self.assertEqual(frame_ascii(frame), "." * 4 + "r" * 4)
 
+    def test_frame_at_width_11_half_red(self):
+        # Same mid-meeting event (pct .5) via frame_at at width 11 -> floor(5.5) trailing red.
+        repo = events.EventsRepository()
+        repo.load_events([{"start": st(2026, 11, 11, 9, 0, 0), "end": st(2026, 11, 11, 10, 0, 0)}])
+        recorder = FrameRecorder()
+        renderer = MeetingTimeLeft(repo, recorder)
+        with freeze_clock(NOW):
+            frame = renderer.frame_at(NOW, 11)
+        self.assertEqual(frame_ascii(frame), "." * 6 + "r" * 5)
+
+    def test_frame_at_width_7_half_red(self):
+        # Same mid-meeting event (pct .5) via frame_at at width 7 -> floor(3.5) trailing red.
+        repo = events.EventsRepository()
+        repo.load_events([{"start": st(2026, 11, 11, 9, 0, 0), "end": st(2026, 11, 11, 10, 0, 0)}])
+        recorder = FrameRecorder()
+        renderer = MeetingTimeLeft(repo, recorder)
+        with freeze_clock(NOW):
+            frame = renderer.frame_at(NOW, 7)
+        self.assertEqual(frame_ascii(frame), "." * 4 + "r" * 3)
+
+    def test_frame_for_event_matches_first_current(self):
+        # The column path: frame_for_event on each stored event vs the singular
+        # frame() (first current by start).
+        repo = events.EventsRepository()
+        repo.load_events([
+            {"start": st(2026, 11, 11, 9, 0, 0), "end": st(2026, 11, 11, 10, 0, 0)},
+            {"start": st(2026, 11, 11, 9, 30, 0), "end": st(2026, 11, 11, 11, 0, 0)},
+        ])
+        recorder = FrameRecorder()
+        renderer = MeetingTimeLeft(repo, recorder)
+        with freeze_clock(NOW):
+            self.assertEqual(
+                renderer.frame_for_event(repo.get_current_events(now=NOW)[0], NOW, 24),
+                renderer.frame(NOW))
+
 
 if __name__ == "__main__":
     unittest.main()

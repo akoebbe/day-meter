@@ -24,14 +24,19 @@ class EventsRepository():
         new_events.sort(key=lambda e: e["start"])
         self.EVENTS = new_events
 
-    def get_current_event(self, now=None):
+    def get_current_events(self, now=None):
         if now is None:
             now = utc_to_local(time.localtime(), self.tz)
-        
+
         current_events = [event for event in self.EVENTS if event["start"] < now and event["end"] > now]
+        current_events.sort(key=lambda event: event["start"])
+        return current_events
+
+    def get_current_event(self, now=None):
+        current_events = self.get_current_events(now)
         if len(current_events) > 0:
             return current_events[0]
-        
+
         return None
     
     def get_events_starting_between(self, start, end, log=True):

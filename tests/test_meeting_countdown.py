@@ -128,6 +128,26 @@ class MeetingCountdownTests(unittest.TestCase):
         frame = self._frame([((2026, 11, 11, 9, 5, 0), (2026, 11, 11, 10, 0, 0))], 8)
         self.assertEqual(frame_ascii(frame), "g" * 4 + "." * 4)
 
+    def test_frame_at_width_11_half_fill(self):
+        # Same 5-min-out event (pct .5) via frame_at at width 11 -> floor(5.5) green.
+        repo = events.EventsRepository()
+        repo.load_events([{"start": st(2026, 11, 11, 9, 5, 0), "end": st(2026, 11, 11, 10, 0, 0)}])
+        recorder = FrameRecorder()
+        renderer = MeetingCountdown(repo, recorder, 10)
+        with freeze_clock(NOW):
+            frame = renderer.frame_at(NOW, 11)
+        self.assertEqual(frame_ascii(frame), "g" * 5 + "." * 6)
+
+    def test_frame_at_width_7_half_fill(self):
+        # Same 5-min-out event (pct .5) via frame_at at width 7 -> floor(3.5) green.
+        repo = events.EventsRepository()
+        repo.load_events([{"start": st(2026, 11, 11, 9, 5, 0), "end": st(2026, 11, 11, 10, 0, 0)}])
+        recorder = FrameRecorder()
+        renderer = MeetingCountdown(repo, recorder, 10)
+        with freeze_clock(NOW):
+            frame = renderer.frame_at(NOW, 7)
+        self.assertEqual(frame_ascii(frame), "g" * 3 + "." * 4)
+
 
 if __name__ == "__main__":
     unittest.main()

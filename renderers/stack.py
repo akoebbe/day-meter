@@ -5,6 +5,8 @@ and the first occupied layer paints (single commit). Stdlib only (no
 board imports) so it runs under desktop CPython and stdlib-only tests.
 """
 
+from display import frame_math
+
 
 class Layer:
     """Base layer in the display stack.
@@ -54,28 +56,66 @@ class AlertLayer(Layer):
 
 
 class MeetingsLayer(Layer):
-    """Middle layer: countdown and time-left meeting renderers.
+    """Middle layer: countdown and time-left meeting renderers, composed
+    into side-by-side columns (up to self.max_columns) for concurrent
+    meetings.
 
-    Occupied when EITHER meeting renderer has a frame. Draw order is
-    countdown then time-left so that when both are active the time-left
-    frame is last written (today's effective last-writer behavior).
+    Occupied when any current event exists or the countdown has a frame.
+    _draw composes the current meetings (earliest start -> leftmost) and the
+    imminent countdown (green) into ONE full-width frame (frame_math.compose)
+    with explicit OFF gutters (self.gutter_leds wide) between the columns.
+    Reading A: earliest start is leftmost; the countdown takes the rightmost
+    free column.
     """
 
-    def __init__(self, events, countdown, time_left, cadence_s):
+    LED_COUNT = 24
+
+    def __init__(self, events, countdown, time_left, cadence_s,
+                 max_columns=3, gutter_leds=1):
         super().__init__(cadence_s)
         self.events = events
         self.countdown = countdown
         self.time_left = time_left
+        self.max_columns = max_columns
+        self.gutter_leds = gutter_leds
 
     def occupied(self, now):
-        return (self.countdown.frame(now) is not None
-                or self.time_left.frame(now) is not None)
+        return (len(self.events.get_current_events(now=now)) > 0
+                or self.countdown.frame(now) is not None)
 
     def _draw(self, now, display):
-        # Each render = set_frame(frame(now)), no commit.
-        # Countdown first, time-left second (time-left wins when both active).
-        self.countdown.render(now)
-        self.time_left.render(now)
+        """Compose the columns into ONE full-width frame (single set_frame)."""
+        current = self.events.get_current_events(now=now)
+        # Reading A order: current meetings by start ascending (earliest ->
+        # leftmost), up to self.max_columns; the imminent countdown (green)
+        # takes the rightmost free column if in window and a column is open.
+        n_current = min(len(current), self.max_columns)
+        has_countdown = (self.countdown.frame(now) is not None
+                         and n_current < self.max_columns)
+        n = n_current + (1 if has_countdown else 0)
+        if n == 0:
+            return
+        layout = frame_math.column_layout(n, self.LED_COUNT, self.gutter_leds)
+        regions = []
+        col_index = 0
+        for i in range(n_current):
+            offset, width = layout[col_index]
+            regions = self._append_column(regions, col_index, offset,
+                                          self.time_left.frame_for_event(current[i], now, width))
+            col_index += 1
+        if has_countdown:
+            offset, width = layout[col_index]
+            regions = self._append_column(regions, col_index, offset,
+                                          self.countdown.frame_at(now, width))
+        display.set_frame(frame_math.compose(regions, self.LED_COUNT))
+
+    def _append_column(self, regions, index, offset, frame):
+        """Append a column frame plus its leading OFF gutter (when not first)."""
+        if index > 0:
+            regions = (regions
+                        + [(offset - self.gutter_leds,
+                            [0] * self.gutter_leds)])
+        return regions + [(offset, frame)]
 
 
 class BaseLayer(Layer):

@@ -100,3 +100,43 @@ class ComposeTest(unittest.TestCase):
         frame = frame_math.compose([(0, a), (6, b)], led_count=12)
         self.assertEqual(len(frame), 12)
         self.assertEqual(frame, [1] * 6 + [2] * 6)
+
+
+class ColumnLayoutTest(unittest.TestCase):
+    """column_layout splits led_count into n columns with OFF gutters;
+    extra LEDs go to the leftmost column (F4 concurrent-meetings layout)."""
+
+    def test_single_full_width_column(self):
+        self.assertEqual(frame_math.column_layout(1), [(0, 24)])
+
+    def test_two_columns(self):
+        self.assertEqual(frame_math.column_layout(2), [(0, 12), (13, 11)])
+
+    def test_three_columns(self):
+        self.assertEqual(frame_math.column_layout(3), [(0, 8), (9, 7), (17, 7)])
+
+    def test_columns_and_gutters_tile_all_leds(self):
+        for n in (1, 2, 3):
+            columns = frame_math.column_layout(n)
+            indices = []
+            for i, (offset, width) in enumerate(columns):
+                indices.extend(range(offset, offset + width))
+                if i < n - 1:
+                    indices.append(offset + width)  # the gutter index
+            self.assertEqual(sorted(indices), list(range(24)))
+
+    def test_gutter_width_honored(self):
+        # content = 24 - 2 = 22 splits evenly: left 11, gutter 2, right 11.
+        self.assertEqual(frame_math.column_layout(2, gutter=2), [(0, 11), (13, 11)])
+
+    def test_custom_led_count(self):
+        self.assertEqual(frame_math.column_layout(2, led_count=10, gutter=0), [(0, 5), (5, 5)])
+
+    def test_invalid_column_count_raises(self):
+        with self.assertRaises(ValueError):
+            frame_math.column_layout(0)
+
+    def test_gutter_overflow_raises(self):
+        # 3 columns, 12-LED gutters: 2*12 = 24 leaves no content.
+        with self.assertRaises(ValueError):
+            frame_math.column_layout(3, gutter=12)

@@ -127,6 +127,56 @@ class CurrentNextEventTests(unittest.TestCase):
             self.assertEqual(repo.get_current_event()["start"], st(2026, 11, 11, 9, 0, 0))
             self.assertEqual(repo.get_next_event()["start"], st(2026, 11, 11, 12, 0, 0))
 
+class CurrentEventsListTests(unittest.TestCase):
+    """get_current_events returns ALL overlapping events (sorted by start);
+    get_current_event is its first element."""
+
+    def _repo(self):
+        repo = events.EventsRepository()
+        repo.load_events([
+            {"start": st(2026, 11, 11, 9, 0, 0), "end": st(2026, 11, 11, 10, 0, 0)},
+            {"start": st(2026, 11, 11, 9, 30, 0), "end": st(2026, 11, 11, 11, 0, 0)},
+            {"start": st(2026, 11, 11, 12, 0, 0), "end": st(2026, 11, 11, 13, 0, 0)},
+        ])
+        return repo
+
+    def test_returns_all_overlapping_sorted_by_start(self):
+        repo = self._repo()
+        during_both = st(2026, 11, 11, 9, 45, 0)
+        found = repo.get_current_events(now=during_both)
+        self.assertEqual(
+            [e["start"] for e in found],
+            [st(2026, 11, 11, 9, 0, 0), st(2026, 11, 11, 9, 30, 0)])
+
+    def test_sorts_by_start_even_when_stored_out_of_order(self):
+        repo = events.EventsRepository()
+        repo.load_events([
+            {"start": st(2026, 11, 11, 9, 30, 0), "end": st(2026, 11, 11, 11, 0, 0)},
+            {"start": st(2026, 11, 11, 9, 0, 0), "end": st(2026, 11, 11, 10, 0, 0)},
+        ])
+        during_both = st(2026, 11, 11, 9, 45, 0)
+        found = repo.get_current_events(now=during_both)
+        self.assertEqual(
+            [e["start"] for e in found],
+            [st(2026, 11, 11, 9, 0, 0), st(2026, 11, 11, 9, 30, 0)])
+
+    def test_first_element_matches_singular_query(self):
+        # Pinned: get_current_event == get_current_events(...)[0] or None.
+        repo = self._repo()
+        for now in (st(2026, 11, 11, 8, 30, 0), st(2026, 11, 11, 9, 45, 0),
+                    st(2026, 11, 11, 10, 30, 0), st(2026, 11, 11, 13, 30, 0)):
+            found = repo.get_current_events(now=now)
+            singular = repo.get_current_event(now=now)
+            self.assertEqual(singular, found[0] if found else None)
+
+    def test_empty_when_nothing_current(self):
+        repo = self._repo()
+        self.assertEqual(repo.get_current_events(now=st(2026, 11, 11, 8, 30, 0)), [])
+        self.assertEqual(repo.get_current_events(now=st(2026, 11, 11, 13, 30, 0)), [])
+        empty = events.EventsRepository()
+        empty.load_events([])
+        self.assertEqual(empty.get_current_events(now=st(2026, 11, 11, 9, 0, 0)), [])
+
 
 class GetEventsStartingBetweenTests(unittest.TestCase):
     def _repo(self):

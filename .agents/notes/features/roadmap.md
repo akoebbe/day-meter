@@ -45,6 +45,13 @@ event. Architecture surface: repository queries should return **lists** of concu
 the renderer contract needs a defined policy for combining them (stacked fills? priority by start?
 dedicated multi-event screen?). This also makes `MeetingCombined`'s direction relevant again — it is
 currently orphaned in `renderers/meeting_combined.py`.
+> **Status:** scoped + implemented in `.agents/notes/features/concurrent-meetings-columns.md` —
+**all phases done**. The meetings layer composes up to 3 side-by-side columns (n=1 stays
+full-width; 2 = 12/11; 3 = 8/7/7) with ≥1-LED OFF gutters so meetings stay distinguishable.
+Reading A ordering (owner-picked): earliest start leftmost, imminent countdown rightmost. Config:
+`meetings_max_columns` / `meetings_gutter_leds` (defaults 3/1, in `secrets.py.dist`). Desktop-green
+(156 tests, both TZs) **and on-device verified** on the real board (real `Bicolor24Adapter`
+composes one 24-LED frame per tick; gutters OFF; no sub-width `set_frame`).
 
 ## F5. Configurable half-day renderer window start hour (day-boundary wrap)
 

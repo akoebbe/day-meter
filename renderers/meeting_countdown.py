@@ -7,11 +7,19 @@ class MeetingCountdown(BaseRenderer):
         super().__init__(events, bargraph, width)
 
     def frame(self, now):
-        next_event = self.events_repo.get_next_event()
+        return self.frame_at(now, self.width)
+
+    def frame_at(self, now, width):
+        """Self-width frame for the imminent next event, or None.
+
+        width = the LED count the caller wants (column width in the
+        MeetingsLayer compose; self.width for the standalone path).
+        """
+        next_event = self.events_repo.get_next_event(now=now)
         if next_event:
             sec_until = time.mktime(next_event['start']) - time.mktime(now)
             if 0 < sec_until <= self.countdown_min * 60:
                 pct = sec_until/(self.countdown_min*60)
                 #print("Meetings starting in {0} seconds, {1}% time left".format(sec_until, pct * 100))
-                return self.bargraph.progress(pct, width=self.width)
+                return self.bargraph.progress(pct, width=width)
         return None

@@ -35,6 +35,34 @@ def diff(current, next_frame):
             len(current), len(next_frame)))
     return [i for i in range(len(next_frame)) if current[i] != next_frame[i]]
 
+def column_layout(n, led_count=24, gutter=1):
+    """(offset, width) pairs splitting led_count LEDs into n columns.
+
+    n-1 gutter LEDs of width `gutter` separate the columns (gutters are OFF
+    and belong to no column); extra LEDs beyond the even split go to the
+    leftmost column. n = 1 yields a single full-width column.
+
+    n=24/2:  [(0, 12), (13, 11)]
+    n=24/3:  [(0, 8), (9, 7), (17, 7)]
+    """
+    if n < 1:
+        raise ValueError("column count must be >= 1, got {0}".format(n))
+    if gutter < 0:
+        raise ValueError("gutter width must be >= 0, got {0}".format(gutter))
+    if (n - 1) * gutter >= led_count:
+        raise ValueError("gutters of {0} LED do not fit {1} columns in {2} LEDs".format(
+            gutter, n, led_count))
+    content = led_count - (n - 1) * gutter
+    base = content // n
+    extra = content % n
+    columns = []
+    offset = 0
+    for i in range(n):
+        width = base + (extra if i == 0 else 0)
+        columns.append((offset, width))
+        offset += width + gutter
+    return columns
+
 
 def compose(regions, led_count=24):
     """Place sub-width frames at offsets into one full-width frame.

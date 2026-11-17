@@ -119,7 +119,11 @@ alert = MeetingAlert(duration_s=secrets.get("alert_duration_s", 5), cadence_s=se
 alert_renderer = meeting_alert.MeetingAlertRenderer(cal_events, display, alert)
 # Display layer stack (topmost-wins; single commit per layer)
 alert_layer = stack_mod.AlertLayer(alert, alert_renderer, cadence_s=secrets.get("alert_cadence_s", 0.2))
-meetings_layer = stack_mod.MeetingsLayer(cal_events, meeting_countdown_renderer, meeting_time_left_renderer, cadence_s=5)
+meetings_layer = stack_mod.MeetingsLayer(
+    cal_events, meeting_countdown_renderer, meeting_time_left_renderer,
+    cadence_s=5,
+    max_columns=secrets.get("meetings_max_columns", 3),
+    gutter_leds=secrets.get("meetings_gutter_leds", 1))
 base_layer = stack_mod.BaseLayer([half_day_renderer], cadence_s=5)
 stack = [alert_layer, meetings_layer, base_layer]
 
