@@ -3,9 +3,6 @@ from posix_tz import utc_to_local
 
 class EventsRepository():
 
-    # TODO: Make this a class
-    EVENTS = []
-
     def __init__(self, tz=None, filter_out_of_office=False):
         self.EVENTS = []
         self.tz = tz
