@@ -7,7 +7,7 @@ import rtc
 import wifi
 import asyncio
 import gcal
-from renderers import static_day_renderer, static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer, meeting_alert, stack as stack_mod
+from renderers import static_half_day_renderer, meeting_countdown, meeting_time_left, zoom_day_renderer, meeting_alert, stack as stack_mod
 from meeting_alert_controller import MeetingAlert
 import ssl
 import adafruit_requests
@@ -110,7 +110,6 @@ try:
 except (ValueError, TypeError, AttributeError):
     tz = None
 cal_events = EventsRepository(tz=tz, filter_out_of_office=secrets.get("filter_out_of_office", False))
-#day_renderer = static_day_renderer.StaticDayRenderer(cal_events, display)
 half_day_renderer = static_half_day_renderer.StaticHalfDayRenderer(cal_events, display, 8)
 meeting_countdown_renderer = meeting_countdown.MeetingCountdown(cal_events, display, 10)
 meeting_time_left_renderer = meeting_time_left.MeetingTimeLeft(cal_events, display)

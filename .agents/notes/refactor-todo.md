@@ -40,11 +40,11 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
   "stays orphaned; revisit only if the owner wants it later." Delete only if the owner approves.
   If it stays, item 2 still fixes its `mktime` calls.
 
-- [ ] **6. `renderers/static_day_renderer.py`** — imported at `main.py:10` but the
+- [x] **6. `renderers/static_day_renderer.py`** — imported at `main.py:10` but the
   instantiation (`main.py:113`) is commented out and it is never in the ticker. Delete the
   file and the import entry.
 
-- [ ] **7. `renderers/base_renderer.py:4-10`** — commented `adafruit_datetime` block and
+- [x] **7. `renderers/base_renderer.py:4-10`** — commented `adafruit_datetime` block and
   `UTC_OFFSET = -5`; AGENTS.md already flags the constant as dead/harmless. Delete lines 4-10,
   keep the live imports at 1-3.
 

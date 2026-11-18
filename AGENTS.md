@@ -84,7 +84,6 @@ Renderers (`renderers/`, all draw frames of 24 chars mapped to LEDs via the inje
 - `MeetingCountdown(countdown_min=10)` — **active**: green left-justified fill for the next event within 10 min of start.
 - `MeetingTimeLeft` — **active**: red right-justified fill for fraction of current event remaining.
 - `ZoomDayRenderer` — button-driven; zoom levels map to {60, 30, 15, 10} minutes/LED over a 24-LED window near "now".
-- `StaticDayRenderer` — instantiated but **not** in the active ticker (commented out).
 - `MeetingCombined` — orphaned/experimental; not imported by `main.py`.
 
 Data model: `EventsRepository.EVENTS` holds lists of `{"start", "end"}` as naive `time.struct_time`.
@@ -103,7 +102,6 @@ events are filtered only when `secrets["filter_out_of_office"]` is true (opt-in,
   `main.py` parses it via `posix_tz.parse_posix_tz` (try/except → `tz=None` fallback = identity).
   `EventsRepository` converts events UTC→local at store (`load_events_from_google`) and converts
   `now` to local at query (`get_current_event`/`get_next_event`); all comparisons are local-vs-local.
-  `base_renderer.py` still has dead `UTC_OFFSET = -5` code (unused, harmless).
   **Verify time assumptions before editing anything date/time related** — the B2 conversion point
   (store vs. query) must stay consistent across the codebase.
 - `display/` (F1 seam): `frame_math.py` = pure stdlib frame math (plain lists, no
