@@ -163,5 +163,6 @@ Persistent agent context lives in `.agents/`:
 
 - `AGENTS.md` (this file) — standing instructions; keep it current when conventions change.
 - `.agents/notes/snapshot-timeline.md` — evidence for the backup provenance record above.
+- `.agents/notes/refactor-todo.md` — ten-item refactor working list (tiered A/B/C); check items off as they land.
 - Future feature work: the shared backlog lives in `.agents/notes/features/roadmap.md`; individual `<topic>.md`
   notes get added there as each feature is scoped.
