@@ -34,10 +34,10 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
   `commit_frame` are all undefined at that scope. Delete the class, the module flag, and the
   `asyncio` import it was the only user of.
 
-- [ ] **5. `renderers/meeting_combined.py`** — orphaned (no importer) and a broken duplicate
+- [x] **5. `renderers/meeting_combined.py`** — orphaned (no importer) and a broken duplicate
   of countdown + time-left (`get_next_event()` with no `now` arg and no None-guard).
   ⚠️ Owner decision: `.agents/notes/features/concurrent-meetings-columns.md:256` pins it as
-  "stays orphaned; revisit only if the owner wants it later." Delete only if the owner approves.
+  "stays orphaned; revisit only if the owner wants it later." Owner chose to keep it (2026-11-18); delete only on explicit approval.
   If it stays, item 2 still fixes its `mktime` calls.
 
 - [x] **6. `renderers/static_day_renderer.py`** — imported at `main.py:10` but the
