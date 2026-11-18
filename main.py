@@ -175,21 +175,6 @@ async def base_runner():
         print("Mem Free: {} bytes (base_runner)".format(gc.mem_free()))
         await asyncio.sleep(5)
 
-async def calendar_checker():
-    while True:
-        now = time.localtime()
-        next_event = cal_events.get_next_event()
-        if next_event:
-            next_start = next_event["start"]
-            next_end = next_event["end"]
-            if next_start > now:
-                print("Start is before now")
-
-        gc.collect()
-        print("Mem Free: {} bytes (calendar_checker)".format(gc.mem_free()))
-
-        await asyncio.sleep(5)
-
 async def button_listener():
     while True:
         boot_button.update()

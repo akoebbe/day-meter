@@ -25,7 +25,7 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
 
 ## Tier B — Dead/broken code removal (low risk; grep-verified no live importers)
 
-- [ ] **3. `main.py` `calendar_checker` (lines 178-191)** — defined but never scheduled
+- [x] **3. `main.py` `calendar_checker` (lines 178-191)** — defined but never scheduled
   (`main()` creates only refresh_token/event_fetcher/alert/base/button tasks), and buggy
   anyway: `now = time.localtime()` is UTC while event starts are local. Delete the function.
 
