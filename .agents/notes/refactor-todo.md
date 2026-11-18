@@ -29,7 +29,7 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
   (`main()` creates only refresh_token/event_fetcher/alert/base/button tasks), and buggy
   anyway: `now = time.localtime()` is UTC while event starts are local. Delete the function.
 
-- [ ] **4. `bicolor24.py` `WifiAnimation` block (lines 43-69) + `import asyncio`** — dormant
+- [x] **4. `bicolor24.py` `WifiAnimation` block (lines 43-69) + `import asyncio`** — dormant
   and broken: `WifiAnimation.tick()` is called on the class, and `np` / `bc24` / `set_frame` /
   `commit_frame` are all undefined at that scope. Delete the class, the module flag, and the
   `asyncio` import it was the only user of.

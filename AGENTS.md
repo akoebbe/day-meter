@@ -112,8 +112,6 @@ events are filtered only when `secrets["filter_out_of_office"]` is true (opt-in,
   `bicolor24.py` = first adapter (I2C init in `__init__`, diff-writes changed LEDs,
   `commit()` prints ASCII then `bc24.show()`); `selector.py` builds the adapter from
   `secrets["display"]` (default `bicolor24`; unknown name → `ValueError` at boot).
-  `WifiAnimation` remains dormant (`wifi_animation = False`) and **buggy** — it calls
-  `WifiAnimation.tick()` without an instance. Fix before ever enabling it.
 - **Frame LED notation:** represent a 24-LED frame in prose/notes with color-square emoji — ⬛ off, 🟥 red, 🟨 yellow, 🟩 green — a 1:1 stand-in for the digits `commit()` actually prints (`.`, `1`, `2`, `3`). Those digits are the palette ints from `adafruit_ht16k33` (`LED_OFF=0`, `LED_RED=1`, `LED_GREEN=2`, `LED_YELLOW=3`), emitted by `display/bicolor24.py` `commit()`. Prefer the emoji over a raw digit string when quoting a frame to a human.
 - Google Calendar call in `gcal.py`: REST GET with `timeZone=UTC`, `singleEvents=true`,
   `orderBy=startTime`, `fields=items(start,end,eventType)`. `timeZone=UTC` is required because `iso_to_time_struct`
