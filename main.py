@@ -37,20 +37,25 @@ except ImportError:
 display = build_display(secrets)
 gc.collect()
 print("Mem Free: {} bytes (start)".format(gc.mem_free()))
+def retry_boot_step(step, label, progress):
+    """Run one boot step with the standard yellow-progress retry pattern."""
+    display.progress(progress, commit=True)
+    while True:
+        if label:
+            print(label)
+        try:
+            step()
+            return
+        except Exception as inst:
+            print(inst, "(Retrying)")
+            display.progress(progress, commit=True, color="y")
+            time.sleep(1)
+            display.progress(progress, commit=True)
 
 
 print("\n----------------------------------------\n")
 print("Connecting to Wifi: {0}".format(secrets["ssid"]))
-display.progress(0.25, commit=True)
-while True:
-    try:
-        wifi.radio.connect(secrets['ssid'], secrets['password'])
-        break
-    except Exception as inst:
-        print(inst, "(Retrying)")
-        display.progress(0.25, commit=True, color="y")
-        time.sleep(1)
-        display.progress(0.25, commit=True)
+retry_boot_step(lambda: wifi.radio.connect(secrets['ssid'], secrets['password']), None, 0.25)
 
 gc.collect()
 print("Mem Free: {} bytes (wifi)".format(gc.mem_free()))
@@ -63,21 +68,15 @@ requests = adafruit_requests.Session(pool, ssl.create_default_context())
 
 gc.collect()
 print("Mem Free: {} bytes (request init)".format(gc.mem_free()))
+google_cal = gcal.GoogleCalendar(requests)
 
-display.progress(0.5, commit=True)
-while True:
-    print("Getting time from NTP")
-    try:
-        ntp = adafruit_ntp.NTP(pool)
-        rtc.RTC().datetime = ntp.datetime
-        gc.collect()
-        print("Mem Free: {} bytes (ntp)".format(gc.mem_free()))
-        break
-    except Exception as inst:
-        print(inst, "(Retrying)")
-        display.progress(0.5, commit=True, color="y")
-        time.sleep(1)
-        display.progress(0.5, commit=True)
+def ntp_step():
+    ntp = adafruit_ntp.NTP(pool)
+    rtc.RTC().datetime = ntp.datetime
+    gc.collect()
+    print("Mem Free: {} bytes (ntp)".format(gc.mem_free()))
+
+retry_boot_step(ntp_step, "Getting time from NTP", 0.5)
 
 
 
@@ -85,19 +84,9 @@ print("Current time is {0}".format(time.localtime()))
 print("\n----------------------------------------\n")
 
 # ONE TIME USE for client oauth (uncommnet if you have to reset client keys)
-# gcal.initialize_client_keys()
+# google_cal.initialize_client_keys()
 
-display.progress(0.75, commit=True)
-while True:
-    print("Refreshing Google Token")
-    try:
-        gcal.refresh_token()
-        break
-    except Exception as inst:
-        print(inst, "(Retrying)")
-        display.progress(0.75, commit=True, color="y")
-        time.sleep(1)
-        display.progress(0.75, commit=True)
+retry_boot_step(google_cal.refresh_token, "Refreshing Google Token", 0.75)
 
 gc.collect()
 print("Mem Free: {} bytes (google token)".format(gc.mem_free()))
@@ -133,7 +122,7 @@ async def refresh_token_runner():
     while True:
         print("Refreshing token")
         try:
-            gcal.refresh_token()
+            google_cal.refresh_token()
         except Exception as e:
             print("Couldn't refresh token. Skipping this attempt. Exception: {}".format(e))
             continue            
@@ -144,7 +133,7 @@ async def refresh_token_runner():
 
 async def event_fetcher():
     while True:
-        g_events = gcal.get_calendar_events()
+        g_events = google_cal.get_calendar_events()
         cal_events.load_events_from_google(g_events)
         gc.collect()
         print("Mem Free: {} bytes (event_fetcher)".format(gc.mem_free()))

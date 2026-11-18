@@ -50,7 +50,7 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
 
 ## Tier C — Structural seams (unblock roadmap F2/F3)
 
-- [ ] **8. `gcal.py` side-effectful module-level init** — `pool`/`requests` (:15-17),
+- [x] **8. `gcal.py` side-effectful module-level init** — `pool`/`requests` (:15-17),
   `CALENDAR_ID` (:21), duplicated `scopes` (:18 and :30), `google_auth = OAuth2(...)`
   (:31-38). Everything builds at import, so the module can't be imported without wifi+secrets.
   F2 (Outlook) needs a calendar-source adapter behind `EventsRepository`.
@@ -59,18 +59,18 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
   keep `initialize_client_keys` (:40, one-time re-auth) reachable.
   Verify: desktop import of the new class against a fake HTTP session.
 
-- [ ] **9. `events.py` `EventsRepository` cleanup** — drop the dead class attribute
+- [x] **9. `events.py` `EventsRepository` cleanup** — drop the dead class attribute
   `EVENTS = []` and the stale `# TODO: Make this a class` (:6-7). Two load paths:
   `load_events` (:14, used by tests) vs `load_events_from_google` (:17, production);
   keep both or reconcile deliberately — don't change the Google-JSON contract.
   This module is the F2 normalization boundary; tighten it before F2 lands.
 
-- [ ] **10. `main.py` boot: factor the retry loops + drop the dead `requests` Session**
+- [x] **10. `main.py` boot: factor the retry loops + drop the dead `requests` Session**
   — the wifi (:45-53), NTP (:68-80), and token (:91-100) steps are three hand-rolled
   `while True` loops with the same yellow-progress / `display.progress` pattern; factor a
-  retry helper. Also `requests = ...` at :62 (with its `ssl` context) is never read — `gcal`
-  builds its own session — so it is wasted work on a 2 MB PSRAM board. Delete it, then trim
-  the now-dead `import ssl` / `import adafruit_requests` from main.py (keep the NTP uses).
+  retry helper. The `requests = ...` session at :62 is not dead once item 8 lands — it becomes
+  the session injected into `GoogleCalendar` (one shared session for NTP + Google), so it is kept
+  and `import ssl` / `import adafruit_requests` stay; only gcal.py's duplicate session is dropped.
 
 ## Verification (apply to every item)
 

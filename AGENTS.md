@@ -65,7 +65,7 @@ Boot sequence (top of `main.py`), each step in a retry loop with yellow bargraph
 1. WiFi connect (secrets from `mysecrets.secrets`).
 2. RTC set via NTP: `adafruit_ntp.NTP(pool).datetime` — **UTC** (device RTC holds UTC;
    local conversion happens in app code, not at the hardware layer).
-3. Google OAuth token refresh: `gcal.refresh_token()` (OAuth2 refresh grant via `adafruit_oauth2`).
+3. Google OAuth token refresh: `google_cal.refresh_token()` (OAuth2 refresh grant via `adafruit_oauth2`).
 4. Async app loop (`asyncio.run(main())`); any unhandled exception resets the whole board by design.
 
 | Task | Interval | Purpose |
@@ -116,7 +116,7 @@ events are filtered only when `secrets["filter_out_of_office"]` is true (opt-in,
   strips `Z` only — it never parses offsets. `orderBy=startTime` is **required**: without it Google returns an
   "unspecified, stable order" — empirically a *partial* page that omits newly-created events (root cause of the
   2026-11-15 missing-events bug, see `.agents/notes/bug-repo-drops-to-1-of-3-events.md`).
-  One-time re-auth: uncomment the `gcal.initialize_client_keys()` line in `main.py` (device-code flow;
+  One-time re-auth: uncomment the `google_cal.initialize_client_keys()` line in `main.py` (device-code flow;
   prints URL + code, then outputs tokens to paste into `mysecrets.py`).
 - `settings.toml` is currently an empty file (gitignored upstream); nothing reads it yet.
 - `sd/placeholder.txt`: hidden from the Python namespace when a physical SD card is inserted (`/sd`).
