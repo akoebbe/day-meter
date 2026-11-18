@@ -72,9 +72,10 @@ class freeze_clock(object):
 
     Patches BOTH time.localtime and time.mktime: EventsRepository reads the
     clock inside get_current_event/get_next_event even when renderers are handed
-    a fixed `now`, and MeetingCountdown/MeetingTimeLeft compute pct from mktime
-    deltas. The fake mktime is a linear mapping of struct fields -- deterministic
-    on any machine/timezone, no DST dependence:
+    a fixed `now`. The mktime patch is a vestigial safety net -- renderers no
+    longer call time.mktime (they use posix_tz.local_delta, whose tz=None path
+    is the same struct-field delta). The fake mktime is a linear mapping of
+    struct fields -- deterministic on any machine/timezone, no DST dependence:
         seconds = (tm_mday*24 + tm_hour)*3600 + tm_min*60 + ts[5]
     """
 
@@ -102,7 +103,8 @@ class freeze_clock(object):
 
 
 def mktime_delta(start_struct, end_struct):
-    """Exact deterministic seconds delta under freeze_clock (for expected-pct math)."""
+    """Vestigial: the struct-field delta the fake mktime produces (expected-pct
+    math); equals the tz=None posix_tz.local_delta path renderers now use."""
     return freeze_clock._mktime(end_struct) - freeze_clock._mktime(start_struct)
 
 # ---------------------------------------------------------------------------

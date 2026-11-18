@@ -1,5 +1,5 @@
 from .base_renderer import BaseRenderer
-import time
+from posix_tz import local_delta
 
 
             
@@ -18,8 +18,8 @@ class MeetingTimeLeft(BaseRenderer):
 
     def frame_for_event(self, current_event, now, width):
         if current_event:
-            sec_total = time.mktime(current_event['end']) - time.mktime(current_event['start'])
-            sec_left = time.mktime(current_event['end']) - time.mktime(now)
+            sec_total = local_delta(current_event['start'], current_event['end'], self.events_repo.tz)
+            sec_left = local_delta(now, current_event['end'], self.events_repo.tz)
             pct = sec_left/sec_total
             print("Meeting elapsed {0}/{1} s, {2:.1f}% left".format(sec_total - sec_left, sec_total, pct * 100))
             return self.bargraph.progress(pct, "r", "right", width=width)

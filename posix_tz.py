@@ -353,3 +353,39 @@ def utc_to_local(utc_struct, tz):
     if tz is None:
         return utc_struct
     return add_seconds(utc_struct, offset_at(utc_struct, tz))
+
+
+def _local_to_utc_epoch(local_struct, tz):
+    """True UTC epoch (seconds) for a local wall-clock struct_time.
+
+    Resolves the zone offset in two passes: pass one looks up the offset
+    at the wall time itself (used as a UTC proxy); pass two re-derives
+    the offset at that candidate UTC instant and corrects if it differs.
+    Two passes suffice for a single DST pair per year (POSIX TZ).
+    Wall times in the spring gap map to the pre-transition instant;
+    ambiguous wall times in the fall-back hour map to the first occurrence.
+    """
+    wall_ep = _struct_to_epoch(local_struct)
+    offset = offset_at(local_struct, tz)
+    utc_ep = wall_ep - offset
+    if tz.rule_start is not None:
+        y, mo, d, h, mi, s = _epoch_to_components(utc_ep)
+        cand = time.struct_time((y, mo, d, h, mi, s, 0, -1, -1))
+        offset2 = offset_at(cand, tz)
+        if offset2 != offset:
+            utc_ep = wall_ep - offset2
+    return utc_ep
+
+
+def local_delta(start_local, end_local, tz):
+    """Elapsed seconds between two local wall-clock struct_times.
+
+    DST-aware: each wall time is resolved to a true UTC epoch
+    (_local_to_utc_epoch), so a span crossing a DST transition counts
+    real elapsed seconds, not the wall-clock difference. tz=None
+    returns the plain field delta (identity; the board RTC holds UTC,
+    so mktime deltas are plain field deltas there).
+    """
+    if tz is None:
+        return _struct_to_epoch(end_local) - _struct_to_epoch(start_local)
+    return _local_to_utc_epoch(end_local, tz) - _local_to_utc_epoch(start_local, tz)

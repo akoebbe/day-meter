@@ -6,9 +6,9 @@ Run from repo root with no installs or board hardware:
 
 MeetingCountdown.render(now) takes its render time as an argument, but it
 selects the next event via get_next_event() WITHOUT passing now -- so the
-internal time.localtime() read is frozen via fakes.freeze_clock (which also
-makes time.mktime linear on struct fields; deltas are exact and TZ/DST
-independent).
+internal time.localtime() read is frozen via fakes.freeze_clock, which still
+covers the repo's now=None query; the renderer itself computes sec_until via
+posix_tz.local_delta on the frozen structs (no time.mktime left in renderers).
 
 Semantics pinned from source: writes only when 0 < sec_until <= countdown_min*60,
 then the renderer calls set_frame with that fill: exactly ONE frame is recorded per

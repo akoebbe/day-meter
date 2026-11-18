@@ -4,7 +4,7 @@ Run from repo root with no installs or board hardware:
     python3 -m unittest discover tests
 
 The renderer's frame(now) is pure: it derives the yellow left-to-right sweep
-fill from (now - alert_started) / alert.duration_s using time.mktime on the
+fill from (now - alert_started) / alert.duration_s using posix_tz.local_delta on
 injected structs, then bargraph.progress(frac, "y", "left", width=self.width).
 The test drives mark_started(start) + frame(now) with explicit struct_times and
 asserts the exact filled LED count. The fake recorder's progress mirrors

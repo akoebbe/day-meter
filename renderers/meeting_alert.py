@@ -9,7 +9,7 @@ the animation from elapsed time. render(now) writes the full-width frame at
 this renderer's width (v1 = 24) via the BaseRenderer delegation.
 """
 from .base_renderer import BaseRenderer
-import time
+from posix_tz import local_delta
 
 
 class MeetingAlertRenderer(BaseRenderer):
@@ -25,6 +25,6 @@ class MeetingAlertRenderer(BaseRenderer):
     def frame(self, now):
         if self.alert_started is None:
             return None
-        sec_elapsed = time.mktime(now) - time.mktime(self.alert_started)
+        sec_elapsed = local_delta(self.alert_started, now, self.events_repo.tz)
         frac = max(0.0, min(1.0, sec_elapsed / self.alert.duration_s))
         return self.bargraph.progress(frac, "y", "left", width=self.width)

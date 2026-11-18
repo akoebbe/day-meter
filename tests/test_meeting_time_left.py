@@ -5,11 +5,12 @@ Run from repo root with no installs or board hardware:
     python3 -m unittest discover tests
 
 MeetingTimeLeft.render(now) calls get_current_event() WITHOUT passing now -- the
-internal time.localtime() read is frozen via fakes.freeze_clock, and the mktime
-deltas (algebraic in struct fields under the fake) are exact under any TZ/DST.
+internal time.localtime() read is frozen via fakes.freeze_clock; the duration
+deltas come from posix_tz.local_delta on the stored local structs (the tz=None
+repo path is the plain struct-field delta, matching the fake mktime math)
 
 Semantics pinned from source (renderers/meeting_time_left.py): writes only when a
-current event exists; pct = sec_left/sec_total with sec_* computed via time.mktime on
+current event exists; pct = sec_left/sec_total with sec_* from posix_tz.local_delta on
 the frozen structs, then progress(pct, "r", "right") + set_frame -- exactly ONE frame
 recorded per write. Right-justified red fill: floor(24 * pct) trailing red LEDs, the
 rest off (leading).
@@ -31,6 +32,7 @@ import time
 import unittest
 
 import events
+import posix_tz
 from fakes import FrameRecorder, freeze_clock, frame_ascii
 from renderers.meeting_time_left import MeetingTimeLeft
 
@@ -155,6 +157,23 @@ class MeetingTimeLeftTests(unittest.TestCase):
             self.assertEqual(
                 renderer.frame_for_event(repo.get_current_events(now=NOW)[0], NOW, 24),
                 renderer.frame(NOW))
+    def test_dst_crossing_durations_tz_aware(self):
+        # tz-aware repo (Chicago): a 01:00-06:00 wall span on 2026-11-01 crosses
+        # the fall transition (CDT->EST). Durations must be real elapsed seconds,
+        # not the wall-clock difference:
+        #   sec_total = local_delta(01:00 -> 06:00) = 21600 s (06:00Z -> 12:00Z)
+        #   sec_left  = local_delta(04:00 -> 06:00) =  7200 s (10:00Z -> 12:00Z)
+        #   pct = 7200/21600 = 1/3 -> floor(24 * pct) = 8 trailing red.
+        # No freeze_clock: `now` is passed explicitly, so the repo's
+        # time.localtime() fallback is never hit.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        repo = events.EventsRepository(tz=tz)
+        repo.load_events([{"start": st(2026, 11, 1, 1, 0, 0),
+                            "end": st(2026, 11, 1, 6, 0, 0)}])
+        renderer = MeetingTimeLeft(repo, FrameRecorder())
+        now = st(2026, 11, 1, 4, 0, 0)
+        frame = renderer.frame(now)
+        self.assertEqual(frame_ascii(frame), "." * 16 + "r" * 8)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 from .base_renderer import BaseRenderer
-import time
+from posix_tz import local_delta
 
 class MeetingCountdown(BaseRenderer):
     def __init__(self, events, bargraph, countdown_min: 10, width: int = 24):
@@ -17,7 +17,7 @@ class MeetingCountdown(BaseRenderer):
         """
         next_event = self.events_repo.get_next_event(now=now)
         if next_event:
-            sec_until = time.mktime(next_event['start']) - time.mktime(now)
+            sec_until = local_delta(now, next_event['start'], self.events_repo.tz)
             if 0 < sec_until <= self.countdown_min * 60:
                 pct = sec_until/(self.countdown_min*60)
                 #print("Meetings starting in {0} seconds, {1}% time left".format(sec_until, pct * 100))

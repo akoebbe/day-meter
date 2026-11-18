@@ -12,7 +12,7 @@ Working list of ten refactor items, tiered by value. Check items off as they lan
   `google_auth_user` line. Do NOT touch `mysecrets.py`.
   Verify: desktop test that the gcal import path works against a template-shaped secrets dict.
 
-- [ ] **2. Renderer duration math mixes wall-clock + `time.mktime`**
+- [x] **2. Renderer duration math mixes wall-clock + `time.mktime`**
   `renderers/meeting_countdown.py:20`, `renderers/meeting_time_left.py:21-22`,
   `renderers/meeting_alert.py:28` (and `renderers/meeting_combined.py:16,25-26` if that file
   survives item 5). Events and `now` are local wall-clock `struct_time`, but durations go

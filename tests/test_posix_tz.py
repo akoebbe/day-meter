@@ -241,5 +241,65 @@ class EventsRepositoryTzTests(unittest.TestCase):
         self.assertEqual(ev["start"].tm_hour, 9)
 
 
+class PosixTzLocalDeltaTests(unittest.TestCase):
+    """local_delta + _local_to_utc_epoch: DST-aware wall-clock deltas."""
+
+    def _st(self, y, m, d, h=0, mi=0, s=0):
+        return time.struct_time((y, m, d, h, mi, s, 0, -1, -1))
+
+    def test_chicago_spring_cross_counts_real_seconds(self):
+        # 2026-03-08: 02:00 CDT never exists (01:59 -> 03:00); a wall span that
+        # skips the gap still counts real elapsed seconds.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz.local_delta(self._st(2026,3,8,1,30), self._st(2026,3,8,5,0), tz), 9000)
+
+    def test_chicago_fall_cross_counts_real_seconds(self):
+        # 2026-11-01: 02:00 CDT -> 01:00 EST, so the 01:xx hour repeats.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz.local_delta(self._st(2026,11,1,1,30), self._st(2026,11,1,4,0), tz), 12600)
+
+    def test_fall_ambiguous_maps_to_first_occurrence(self):
+        # 01:30 on 2026-11-01 is ambiguous (CDT then EST); first occurrence.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz._local_to_utc_epoch(self._st(2026,11,1,1,30), tz) % 86400, 23400)
+
+    def test_fall_end_maps_past_transition(self):
+        # 04:00 on 2026-11-01 is unambiguously EST.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz._local_to_utc_epoch(self._st(2026,11,1,4,0), tz) % 86400, 36000)
+
+    def test_spring_gap_maps_to_pre_transition(self):
+        # 02:30 on 2026-03-08 is in the (non-existent) spring gap.
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz._local_to_utc_epoch(self._st(2026,3,8,2,30), tz) % 86400, 27000)
+
+    def test_spring_cross_end_is_cdt(self):
+        # 05:00 on 2026-03-08 is CDT (post-transition).
+        tz = posix_tz.parse_posix_tz("CST6CDT,M3.2.0/2:00,M11.1.0/2:00")
+        self.assertEqual(posix_tz._local_to_utc_epoch(self._st(2026,3,8,5,0), tz) % 86400, 36000)
+
+    def test_fixed_offset_zone_no_dst(self):
+        tz = posix_tz.parse_posix_tz("EST5")
+        self.assertEqual(posix_tz.local_delta(self._st(2026,1,15,14,0), self._st(2026,1,15,16,0), tz), 7200)
+
+    def test_tz_none_is_plain_field_delta(self):
+        # tz=None identity: the plain struct-field delta (matches board mktime).
+        self.assertEqual(posix_tz.local_delta(self._st(2026,3,8,8,0), self._st(2026,3,8,10,30), None), 9000)
+
+    def test_london_fall_cross_bst_to_gmt(self):
+        # 2026-10-25 01:00 UTC: 02:00 BST -> 01:00 GMT.
+        tz = posix_tz.parse_posix_tz("GMT0BST-1,M3.5.0/1:00,M10.5.0/2:00")
+        self.assertEqual(posix_tz.local_delta(self._st(2026,10,24,23,0), self._st(2026,10,25,3,0), tz), 18000)
+
+    def test_london_fall_ambiguous_first_occurrence(self):
+        tz = posix_tz.parse_posix_tz("GMT0BST-1,M3.5.0/1:00,M10.5.0/2:00")
+        self.assertEqual(posix_tz._local_to_utc_epoch(self._st(2026,10,25,1,30), tz) % 86400, 5400)
+
+    def test_london_spring_cross_gmt_to_bst(self):
+        # 2026-03-29 01:00 UTC: 01:00 GMT -> 02:00 BST.
+        tz = posix_tz.parse_posix_tz("GMT0BST-1,M3.5.0/1:00,M10.5.0/2:00")
+        self.assertEqual(posix_tz.local_delta(self._st(2026,3,29,0,30), self._st(2026,3,29,3,0), tz), 5400)
+
+
 if __name__ == "__main__":
     unittest.main()
